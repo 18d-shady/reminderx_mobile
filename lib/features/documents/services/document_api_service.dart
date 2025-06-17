@@ -205,4 +205,51 @@ class DocumentApiService {
       );
     });
   }
+
+  static Future<http.Response> updateProfile({
+    String? phoneNumber,
+    String? profilePicturePath,
+  }) async {
+    return authorizedRequest((token) async {
+      final request = http.MultipartRequest(
+        'PATCH',
+        Uri.parse('${baseUrl}api/me/'),
+      );
+
+      // Add authorization header
+      request.headers['Authorization'] = 'Bearer $token';
+
+      // Add phone number if provided
+      if (phoneNumber != null) {
+        request.fields['phone_number'] = phoneNumber;
+      }
+
+      // Add profile picture if provided
+      if (profilePicturePath != null) {
+        final file = await http.MultipartFile.fromPath(
+          'profile_picture',
+          profilePicturePath,
+        );
+        request.files.add(file);
+      }
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode != 200) {
+        print('Error response: ${response.body}');
+      }
+
+      return response;
+    });
+  }
+
+  static Future<http.Response> deleteProfile() async {
+    return authorizedRequest((token) {
+      return http.delete(
+        Uri.parse('${baseUrl}api/me/'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+    });
+  }
 }

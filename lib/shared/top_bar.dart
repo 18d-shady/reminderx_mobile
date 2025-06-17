@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 
 class TopBar extends StatelessWidget {
   final String? profileImageUrl;
@@ -25,16 +26,7 @@ class TopBar extends StatelessWidget {
           // Profile Section
           Row(
             children: [
-              CircleAvatar(
-                radius: 25,
-                backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                backgroundImage: profileImageUrl != null
-                    ? NetworkImage(profileImageUrl!)
-                    : null,
-                child: profileImageUrl == null
-                    ? const Icon(Icons.person, size: 30)
-                    : null,
-              ),
+              _buildProfileImage(profileImageUrl),
               const SizedBox(width: 12),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -134,6 +126,31 @@ class TopBar extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildProfileImage(String? profileImagePath) {
+    if (profileImagePath == null) {
+      return CircleAvatar(
+        backgroundColor: Colors.grey[200],
+        child: Icon(Icons.person, color: Colors.grey[600]),
+      );
+    }
+
+    final file = File(profileImagePath);
+    if (file.existsSync()) {
+      return CircleAvatar(
+        backgroundImage: FileImage(file),
+        onBackgroundImageError: (exception, stackTrace) {
+          print('Error loading profile image: $exception');
+        },
+      );
+    }
+
+    // Fallback to default icon if file doesn't exist
+    return CircleAvatar(
+      backgroundColor: Colors.grey[200],
+      child: Icon(Icons.person, color: Colors.grey[600]),
     );
   }
 } 

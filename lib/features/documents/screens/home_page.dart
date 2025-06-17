@@ -42,6 +42,9 @@ class _HomePageState extends State<HomePage> {
             final thirtyDaysFromNow = now.add(const Duration(days: 30));
             final sevenDaysFromNow = now.add(const Duration(days: 7));
 
+            // Count expired documents
+            final expiredDocuments = particulars.where((p) => p.expiryDate.isBefore(now)).length;
+
             // Count documents expiring within 30 days
             final expiringSoon =
                 particulars.where((p) {
@@ -71,7 +74,9 @@ class _HomePageState extends State<HomePage> {
                 'subtitle':
                     particulars.isEmpty
                         ? 'No documents yet'
-                        : '$expiringInSevenDays require immediate action',
+                        : expiredDocuments > 0
+                            ? '$expiredDocuments documents expired'
+                            : '$expiringInSevenDays require immediate action',
                 'number': '${particulars.length}',
                 'icon': Icons.description_outlined,
               },

@@ -271,8 +271,19 @@ class _EditDocumentScreenState extends State<EditDocumentScreen> {
                 decoration: InputDecoration(
                   hintText: 'Enter Document Name',
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
                   ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade200),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Theme.of(context).primaryColor),
+                  ),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 16,
@@ -297,8 +308,19 @@ class _EditDocumentScreenState extends State<EditDocumentScreen> {
                 value: _category,
                 decoration: InputDecoration(
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
                   ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade200),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Theme.of(context).primaryColor),
+                  ),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 16,
@@ -350,8 +372,9 @@ class _EditDocumentScreenState extends State<EditDocumentScreen> {
                     vertical: 16,
                   ),
                   decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey),
-                    borderRadius: BorderRadius.circular(30),
+                    border: Border.all(color: Colors.grey.shade200),
+                    borderRadius: BorderRadius.circular(12),
+                    color: Colors.grey.shade50,
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -361,11 +384,10 @@ class _EditDocumentScreenState extends State<EditDocumentScreen> {
                             ? DateFormat('MMM dd, yyyy').format(_expiryDate!)
                             : 'Select Expiry Date',
                         style: TextStyle(
-                          color:
-                              _expiryDate != null ? Colors.black : Colors.grey,
+                          color: _expiryDate == null ? Colors.grey : Colors.black87,
                         ),
                       ),
-                      const Icon(Icons.calendar_today),
+                      Icon(Icons.calendar_today, color: Colors.grey.shade600),
                     ],
                   ),
                 ),
@@ -384,8 +406,19 @@ class _EditDocumentScreenState extends State<EditDocumentScreen> {
                 decoration: InputDecoration(
                   hintText: 'Enter any additional notes',
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
                   ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade200),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Theme.of(context).primaryColor),
+                  ),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 16,
@@ -409,19 +442,19 @@ class _EditDocumentScreenState extends State<EditDocumentScreen> {
                         vertical: 16,
                       ),
                       decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey),
-                        borderRadius: BorderRadius.circular(30),
+                        border: Border.all(color: Colors.grey.shade200),
+                        borderRadius: BorderRadius.circular(12),
+                        color: Colors.grey.shade50,
                       ),
                       child: Text(
                         _selectedFile?.name ??
                             widget.particular.documentPath?.split('/').last ??
                             'No file selected',
                         style: TextStyle(
-                          color:
-                              (_selectedFile != null ||
-                                      widget.particular.documentPath != null)
-                                  ? Colors.black
-                                  : Colors.grey,
+                          color: (_selectedFile != null ||
+                                  widget.particular.documentPath != null)
+                              ? Colors.black87
+                              : Colors.grey,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -432,8 +465,11 @@ class _EditDocumentScreenState extends State<EditDocumentScreen> {
                     onPressed: _pickFile,
                     icon: const Icon(Icons.upload_file),
                     style: IconButton.styleFrom(
-                      backgroundColor: Colors.blue,
+                      backgroundColor: Theme.of(context).primaryColor,
                       foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
                 ],
@@ -461,8 +497,9 @@ class _EditDocumentScreenState extends State<EditDocumentScreen> {
                     vertical: 16,
                   ),
                   decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey),
-                    borderRadius: BorderRadius.circular(30),
+                    border: Border.all(color: Colors.grey.shade200),
+                    borderRadius: BorderRadius.circular(12),
+                    color: Colors.grey.shade50,
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -472,13 +509,10 @@ class _EditDocumentScreenState extends State<EditDocumentScreen> {
                             ? DateFormat('MMM dd, yyyy').format(_scheduleDate!)
                             : 'Select Schedule Date',
                         style: TextStyle(
-                          color:
-                              _scheduleDate != null
-                                  ? Colors.black
-                                  : Colors.grey,
+                          color: _scheduleDate != null ? Colors.black87 : Colors.grey,
                         ),
                       ),
-                      const Icon(Icons.calendar_today),
+                      Icon(Icons.calendar_today, color: Colors.grey.shade600),
                     ],
                   ),
                 ),
@@ -497,6 +531,11 @@ class _EditDocumentScreenState extends State<EditDocumentScreen> {
                     CheckboxListTile(
                       title: const Text('Email'),
                       value: _selectedReminderMethods.contains('email'),
+                      activeColor: Theme.of(context).primaryColor,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      tileColor: Colors.grey.shade50,
                       onChanged: (bool? value) {
                         setState(() {
                           if (value == true) {
@@ -511,6 +550,11 @@ class _EditDocumentScreenState extends State<EditDocumentScreen> {
                     CheckboxListTile(
                       title: const Text('SMS'),
                       value: _selectedReminderMethods.contains('sms'),
+                      activeColor: Theme.of(context).primaryColor,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      tileColor: Colors.grey.shade50,
                       onChanged: (bool? value) {
                         setState(() {
                           if (value == true) {
@@ -525,6 +569,11 @@ class _EditDocumentScreenState extends State<EditDocumentScreen> {
                     CheckboxListTile(
                       title: const Text('Push Notification'),
                       value: _selectedReminderMethods.contains('push'),
+                      activeColor: Theme.of(context).primaryColor,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      tileColor: Colors.grey.shade50,
                       onChanged: (bool? value) {
                         setState(() {
                           if (value == true) {
@@ -539,6 +588,11 @@ class _EditDocumentScreenState extends State<EditDocumentScreen> {
                     CheckboxListTile(
                       title: const Text('WhatsApp'),
                       value: _selectedReminderMethods.contains('whatsapp'),
+                      activeColor: Theme.of(context).primaryColor,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      tileColor: Colors.grey.shade50,
                       onChanged: (bool? value) {
                         setState(() {
                           if (value == true) {
@@ -563,8 +617,19 @@ class _EditDocumentScreenState extends State<EditDocumentScreen> {
                 value: _recurrence,
                 decoration: InputDecoration(
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
                   ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade200),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Theme.of(context).primaryColor),
+                  ),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 16,
@@ -594,29 +659,48 @@ class _EditDocumentScreenState extends State<EditDocumentScreen> {
                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
               ),
               const SizedBox(height: 8),
-              DropdownButtonFormField<int>(
-                value: _startDaysBefore,
+              TextFormField(
+                initialValue: _startDaysBefore.toString(),
+                keyboardType: TextInputType.number,
+                enabled: _recurrence != 'none',
                 decoration: InputDecoration(
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
                   ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade200),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Theme.of(context).primaryColor),
+                  ),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 16,
                   ),
+                  hintText: _recurrence == 'none' ? 'Disabled for non-recurring reminders' : 'Enter days (1-7)',
                 ),
-                items: const [
-                  DropdownMenuItem(value: 1, child: Text('1 day')),
-                  DropdownMenuItem(value: 3, child: Text('3 days')),
-                  DropdownMenuItem(value: 7, child: Text('7 days')),
-                  DropdownMenuItem(value: 14, child: Text('14 days')),
-                  DropdownMenuItem(value: 30, child: Text('30 days')),
-                ],
+                validator: (value) {
+                  if (_recurrence != 'none') {
+                    final days = int.tryParse(value ?? '');
+                    if (days == null || days < 1 || days > 7) {
+                      return 'Please enter a number between 1 and 7';
+                    }
+                  }
+                  return null;
+                },
                 onChanged: (value) {
-                  if (value != null) {
-                    setState(() {
-                      _startDaysBefore = value;
-                    });
+                  if (_recurrence != 'none') {
+                    final days = int.tryParse(value);
+                    if (days != null && days >= 1 && days <= 7) {
+                      setState(() {
+                        _startDaysBefore = days;
+                      });
+                    }
                   }
                 },
               ),
@@ -639,13 +723,14 @@ class _EditDocumentScreenState extends State<EditDocumentScreen> {
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
+                      borderRadius: BorderRadius.circular(12),
                     ),
+                    elevation: 0,
+                    backgroundColor: Theme.of(context).primaryColor,
                   ),
-                  child:
-                      _isSubmitting
-                          ? const CircularProgressIndicator()
-                          : const Text('Update Document'),
+                  child: _isSubmitting
+                      ? const CircularProgressIndicator()
+                      : const Text('Update Document'),
                 ),
               ),
             ],

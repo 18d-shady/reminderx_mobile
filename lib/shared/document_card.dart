@@ -79,12 +79,12 @@ class DocumentCard extends StatelessWidget {
             ),
             // Right side - Icon at the top
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Theme.of(context).primaryColor,
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Icon(icon, color: Colors.white, size: 36),
+              child: Icon(icon, color: Colors.white, size: 48),
             ),
           ],
         ),

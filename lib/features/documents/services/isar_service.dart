@@ -13,13 +13,23 @@ class IsarService {
 
     final dir = await getApplicationDocumentsDirectory();
 
-    _isar = await Isar.open([
-      ProfileSchema,
-      ParticularSchema,
-      ReminderSchema,
-      AppNotificationSchema,
-    ], directory: dir.path);
+    _isar = await Isar.open(
+      [
+        ProfileSchema,
+        ParticularSchema,
+        ReminderSchema,
+        AppNotificationSchema,
+      ],
+      directory: dir.path,
+    );
 
     return _isar!;
+  }
+
+  static Future<void> closeInstance() async {
+    if (_isar != null) {
+      await _isar!.close();
+      _isar = null;
+    }
   }
 }

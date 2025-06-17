@@ -230,8 +230,19 @@ class _CreateDocumentScreenState extends State<CreateDocumentScreen> {
                 decoration: InputDecoration(
                   hintText: 'Enter Document Name',
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
                   ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade200),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Theme.of(context).primaryColor),
+                  ),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 16,
@@ -256,8 +267,19 @@ class _CreateDocumentScreenState extends State<CreateDocumentScreen> {
                 value: _category,
                 decoration: InputDecoration(
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
                   ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade200),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Theme.of(context).primaryColor),
+                  ),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 16,
@@ -294,20 +316,29 @@ class _CreateDocumentScreenState extends State<CreateDocumentScreen> {
               const SizedBox(height: 8),
               InkWell(
                 onTap: () => _selectDate(context, true),
-                child: InputDecorator(
-                  decoration: InputDecoration(
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 16,
-                    ),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 16,
                   ),
-                  child: Text(
-                    _expiryDate == null
-                        ? 'Select Expiry Date'
-                        : DateFormat('yyyy-MM-dd').format(_expiryDate!),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade200),
+                    borderRadius: BorderRadius.circular(12),
+                    color: Colors.grey.shade50,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        _expiryDate == null
+                            ? 'Select Expiry Date'
+                            : DateFormat('yyyy-MM-dd').format(_expiryDate!),
+                        style: TextStyle(
+                          color: _expiryDate == null ? Colors.grey : Colors.black87,
+                        ),
+                      ),
+                      Icon(Icons.calendar_today, color: Colors.grey.shade600),
+                    ],
                   ),
                 ),
               ),
@@ -326,7 +357,18 @@ class _CreateDocumentScreenState extends State<CreateDocumentScreen> {
                   hintText: 'Notes',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
                   ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade200),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Theme.of(context).primaryColor),
+                  ),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
                   contentPadding: const EdgeInsets.all(16),
                 ),
               ),
@@ -343,17 +385,21 @@ class _CreateDocumentScreenState extends State<CreateDocumentScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey),
+                    border: Border.all(color: Colors.grey.shade200),
                     borderRadius: BorderRadius.circular(12),
+                    color: Colors.grey.shade50,
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.upload_file),
+                      Icon(Icons.upload_file, color: Colors.grey.shade600),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           _selectedFile?.name ?? 'Choose a file',
                           overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: _selectedFile == null ? Colors.grey : Colors.black87,
+                          ),
                         ),
                       ),
                     ],
@@ -408,6 +454,11 @@ class _CreateDocumentScreenState extends State<CreateDocumentScreen> {
                     CheckboxListTile(
                       title: const Text('Email'),
                       value: _selectedReminderMethods.contains('email'),
+                      activeColor: Theme.of(context).primaryColor,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      tileColor: Colors.grey.shade50,
                       onChanged: (bool? value) {
                         setState(() {
                           if (value == true) {
@@ -422,6 +473,11 @@ class _CreateDocumentScreenState extends State<CreateDocumentScreen> {
                     CheckboxListTile(
                       title: const Text('SMS'),
                       value: _selectedReminderMethods.contains('sms'),
+                      activeColor: Theme.of(context).primaryColor,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      tileColor: Colors.grey.shade50,
                       onChanged: (bool? value) {
                         setState(() {
                           if (value == true) {
@@ -436,6 +492,11 @@ class _CreateDocumentScreenState extends State<CreateDocumentScreen> {
                     CheckboxListTile(
                       title: const Text('Push Notification'),
                       value: _selectedReminderMethods.contains('push'),
+                      activeColor: Theme.of(context).primaryColor,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      tileColor: Colors.grey.shade50,
                       onChanged: (bool? value) {
                         setState(() {
                           if (value == true) {
@@ -450,6 +511,11 @@ class _CreateDocumentScreenState extends State<CreateDocumentScreen> {
                     CheckboxListTile(
                       title: const Text('WhatsApp'),
                       value: _selectedReminderMethods.contains('whatsapp'),
+                      activeColor: Theme.of(context).primaryColor,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      tileColor: Colors.grey.shade50,
                       onChanged: (bool? value) {
                         setState(() {
                           if (value == true) {
@@ -474,8 +540,19 @@ class _CreateDocumentScreenState extends State<CreateDocumentScreen> {
                 value: _recurrence,
                 decoration: InputDecoration(
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
                   ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade200),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Theme.of(context).primaryColor),
+                  ),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 16,
@@ -505,19 +582,46 @@ class _CreateDocumentScreenState extends State<CreateDocumentScreen> {
               TextFormField(
                 initialValue: _startDaysBefore.toString(),
                 keyboardType: TextInputType.number,
+                enabled: _recurrence != 'none',
                 decoration: InputDecoration(
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
                   ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade200),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Theme.of(context).primaryColor),
+                  ),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 16,
                   ),
+                  hintText: _recurrence == 'none' ? 'Disabled for non-recurring reminders' : 'Enter days (1-7)',
                 ),
+                validator: (value) {
+                  if (_recurrence != 'none') {
+                    final days = int.tryParse(value ?? '');
+                    if (days == null || days < 1 || days > 7) {
+                      return 'Please enter a number between 1 and 7';
+                    }
+                  }
+                  return null;
+                },
                 onChanged: (value) {
-                  setState(() {
-                    _startDaysBefore = int.tryParse(value) ?? 3;
-                  });
+                  if (_recurrence != 'none') {
+                    final days = int.tryParse(value);
+                    if (days != null && days >= 1 && days <= 7) {
+                      setState(() {
+                        _startDaysBefore = days;
+                      });
+                    }
+                  }
                 },
               ),
               const SizedBox(height: 24),
@@ -539,8 +643,10 @@ class _CreateDocumentScreenState extends State<CreateDocumentScreen> {
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
+                      borderRadius: BorderRadius.circular(12),
                     ),
+                    elevation: 0,
+                    backgroundColor: Theme.of(context).primaryColor,
                   ),
                   child: _isSubmitting
                       ? const SizedBox(

@@ -23,6 +23,18 @@ class SyncService {
       final data = jsonDecode(response.body);
       final user = data['user'];
 
+      String? profilePicturePath;
+      if (data['profile_picture_url'] != null) {
+        try {
+          profilePicturePath =
+              await DocumentStorageService.downloadAndSaveProfilePicture(
+                data['profile_picture_url'],
+              );
+        } catch (e) {
+          print('Error downloading profile picture: $e');
+        }
+      }
+
       final profile =
           Profile()
             ..userId = user['id'].toString()
@@ -35,7 +47,7 @@ class SyncService {
             ..pushNotifications = data['push_notifications']
             ..whatsappNotifications = data['whatsapp_notifications']
             ..subscriptionPlan = data['subscription_plan']?.toString()
-            ..profilePictureUrl = data['profile_picture_url'];
+            ..profilePictureUrl = profilePicturePath;
 
       final isar = await IsarService.getInstance();
       await isar.writeTxn(() async {
@@ -60,10 +72,11 @@ class SyncService {
           String? localDocumentPath;
           if (item['document_url'] != null) {
             try {
-              localDocumentPath = await DocumentStorageService.downloadAndSaveDocument(
-                item['document_url'],
-                item['id'].toString(),
-              );
+              localDocumentPath =
+                  await DocumentStorageService.downloadAndSaveDocument(
+                    item['document_url'],
+                    item['id'].toString(),
+                  );
             } catch (e) {
               print('Error downloading document: $e');
               // Optionally: localDocumentPath = null;
@@ -92,7 +105,9 @@ class SyncService {
                           : r['sent_at'] is String
                           ? DateTime.parse(r['sent_at'] as String)
                           : null
-                  ..reminderMethods = List<String>.from(r['reminder_methods'] ?? [])
+                  ..reminderMethods = List<String>.from(
+                    r['reminder_methods'] ?? [],
+                  )
                   ..recurrence = r['recurrence'] ?? 'none'
                   ..startDaysBefore = r['start_days_before'] ?? 3
                   ..particular.value = particular;
@@ -100,7 +115,7 @@ class SyncService {
 
           await isar.particulars.put(particular);
           await isar.reminders.putAll(reminders);
-          
+
           // Save the links from both sides
           for (final reminder in reminders) {
             await reminder.particular.save();
@@ -122,15 +137,16 @@ class SyncService {
         await isar.appNotifications.clear();
 
         for (final item in data) {
-          final notification = AppNotification()
-            ..id = item['id']
-            ..particularTitle = item['particular_title']
-            ..message = item['message']
-            ..createdAt = DateTime.parse(item['created_at'])
-            ..sendEmail = item['send_email'] ?? false
-            ..sendSms = item['send_sms'] ?? false
-            ..sendPush = item['send_push'] ?? false
-            ..sendWhatsapp = item['send_whatsapp'] ?? false;
+          final notification =
+              AppNotification()
+                ..id = item['id']
+                ..particularTitle = item['particular_title']
+                ..message = item['message']
+                ..createdAt = DateTime.parse(item['created_at'])
+                ..sendEmail = item['send_email'] ?? false
+                ..sendSms = item['send_sms'] ?? false
+                ..sendPush = item['send_push'] ?? false
+                ..sendWhatsapp = item['send_whatsapp'] ?? false;
 
           await isar.appNotifications.put(notification);
         }

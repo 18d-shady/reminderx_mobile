@@ -72,33 +72,75 @@ class _CalendarPageState extends State<CalendarPage> {
       );
     }
 
-    // Add reminders
+    // Add reminders and recurring reminders
     for (final reminder in reminders) {
-      final date = DateTime(
+      // Get the particular document for this reminder
+      final particular = await reminder.particular.value;
+      if (particular == null) continue;
+
+      // Add the main reminder
+      final reminderDate = DateTime(
         reminder.scheduledDate.year,
         reminder.scheduledDate.month,
         reminder.scheduledDate.day,
       );
 
-      if (events[date] == null) {
-        events[date] = [];
+      if (events[reminderDate] == null) {
+        events[reminderDate] = [];
       }
 
-      // Get the particular document for this reminder
-      final particular = await reminder.particular.value;
-      final title = particular != null 
-          ? 'Reminder: ${particular.title}'
-          : 'Reminder';
-
-      events[date]!.add(
+      events[reminderDate]!.add(
         CalendarEvent(
-          title: title,
+          title: 'Reminder: ${particular.title}',
           type: EventType.reminder,
           date: reminder.scheduledDate,
           particular: particular,
           isExpiringSoon: false,
+          recurrence: reminder.recurrence,
         ),
       );
+
+      // Add recurring reminders if applicable
+      if (reminder.recurrence != null && reminder.recurrence != 'none') {
+        final expiryDate = particular.expiryDate;
+        var currentDate = reminder.scheduledDate;
+        
+        // Calculate start date based on start_days_before
+        if (reminder.startDaysBefore != null) {
+          currentDate = expiryDate.subtract(Duration(days: reminder.startDaysBefore!));
+        }
+
+        while (currentDate.isBefore(expiryDate)) {
+          if (reminder.recurrence == 'daily') {
+            currentDate = currentDate.add(const Duration(days: 1));
+          } else if (reminder.recurrence == 'every_2_days') {
+            currentDate = currentDate.add(const Duration(days: 2));
+          }
+
+          if (currentDate.isBefore(expiryDate)) {
+            final recurringDate = DateTime(
+              currentDate.year,
+              currentDate.month,
+              currentDate.day,
+            );
+
+            if (events[recurringDate] == null) {
+              events[recurringDate] = [];
+            }
+
+            events[recurringDate]!.add(
+              CalendarEvent(
+                title: 'Reminder: ${particular.title}',
+                type: EventType.reminder,
+                date: currentDate,
+                particular: particular,
+                isExpiringSoon: false,
+                recurrence: reminder.recurrence,
+              ),
+            );
+          }
+        }
+      }
     }
 
     if (mounted) {
@@ -224,7 +266,7 @@ class _CalendarPageState extends State<CalendarPage> {
                             child: Text(
                               event.type == EventType.expiry
                                   ? '${event.particular?.title} expires'
-                                  : 'Reminder',
+                                  : 'Reminder${event.recurrence != null && event.recurrence != 'none' ? ' (${event.recurrence})' : ''}',
                               style: TextStyle(
                                 fontSize: 8,
                                 color:
@@ -359,6 +401,26 @@ class _CalendarPageState extends State<CalendarPage> {
                                     ),
                                   ),
                                 ),
+                              if (event.recurrence != null && event.recurrence != 'none')
+                                Container(
+                                  margin: const EdgeInsets.only(top: 4),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context).primaryColor.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    'Recurrence: ${event.recurrence}',
+                                    style: TextStyle(
+                                      color: Theme.of(context).primaryColor,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
                             ],
                           ),
                         ),
@@ -437,6 +499,26 @@ class _CalendarPageState extends State<CalendarPage> {
                       ),
                     ),
                   ),
+                if (event.recurrence != null && event.recurrence != 'none')
+                  Container(
+                    margin: const EdgeInsets.only(top: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      'Recurrence: ${event.recurrence}',
+                      style: TextStyle(
+                        color: Theme.of(context).primaryColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -454,6 +536,7 @@ class CalendarEvent {
   final DateTime date;
   final Particular? particular;
   final bool isExpiringSoon;
+  final String? recurrence;
 
   CalendarEvent({
     required this.title,
@@ -461,5 +544,6 @@ class CalendarEvent {
     required this.date,
     this.particular,
     required this.isExpiringSoon,
+    this.recurrence,
   });
 }

@@ -47,7 +47,8 @@ dependencies:
   url_launcher: ^6.2.2
   pdfrx: ^1.0.0
   path: ^1.9.1
-  share_plus: ^11.0.0
+  open_filex: ^4.3.4
+  image_picker: ^1.0.7
 
 dev_dependencies:
   flutter_test:

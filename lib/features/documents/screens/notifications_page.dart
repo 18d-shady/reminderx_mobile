@@ -47,8 +47,25 @@ class _NotificationsPageState extends State<NotificationsPage> {
     }
   }
 
+  Map<String, List<AppNotification>> _groupNotificationsByDate() {
+    final grouped = <String, List<AppNotification>>{};
+    
+    for (final notification in _notifications) {
+      final date = DateFormat('MMMM d, y').format(notification.createdAt);
+      if (!grouped.containsKey(date)) {
+        grouped[date] = [];
+      }
+      grouped[date]!.add(notification);
+    }
+    
+    return grouped;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final groupedNotifications = _groupNotificationsByDate();
+    final primaryColor = Theme.of(context).primaryColor;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Notifications'),
@@ -61,37 +78,58 @@ class _NotificationsPageState extends State<NotificationsPage> {
                   ? const Center(child: Text('No notifications available.'))
                   : ListView.builder(
                       padding: const EdgeInsets.all(16),
-                      itemCount: _notifications.length,
+                      itemCount: groupedNotifications.length,
                       itemBuilder: (context, index) {
-                        final notification = _notifications[index];
-                        return Card(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          child: ListTile(
-                            leading: const Icon(Icons.notifications),
-                            title: Text(
-                              notification.particularTitle,
-                              style: const TextStyle(
-                                fontFamily: 'IranSans',
-                                fontWeight: FontWeight.bold,
+                        final date = groupedNotifications.keys.elementAt(index);
+                        final notifications = groupedNotifications[date]!;
+                        
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8.0),
+                              child: Text(
+                                date,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: primaryColor,
+                                ),
                               ),
                             ),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  notification.message,
-                                  style: const TextStyle(fontFamily: 'IranSans'),
+                            ...notifications.map((notification) => Card(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              child: ListTile(
+                                leading: Icon(
+                                  Icons.notifications,
+                                  color: primaryColor,
                                 ),
-                                Text(
-                                  DateFormat('h:mm a').format(notification.createdAt),
-                                  style: TextStyle(
-                                    color: Colors.grey[600],
-                                    fontSize: 12,
+                                title: Text(
+                                  notification.particularTitle,
+                                  style: const TextStyle(
+                                    fontFamily: 'IranSans',
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                              ],
-                            ),
-                          ),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      notification.message,
+                                      style: const TextStyle(fontFamily: 'IranSans'),
+                                    ),
+                                    Text(
+                                      DateFormat('h:mm a').format(notification.createdAt),
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )).toList(),
+                          ],
                         );
                       },
                     ),

@@ -4,6 +4,10 @@ import '../../auth/services/auth_service.dart';
 import '../services/document_api_service.dart';
 import '../services/sync_service.dart';
 import '../models/profile_model.dart';
+import '../services/isar_service.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import 'package:open_filex/open_filex.dart';
 
 class SettingsPage extends StatefulWidget {
   final Isar isar;
@@ -22,12 +26,22 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _isSaving = false;
   String? _error;
   bool _showNotificationEdit = false;
+  bool _showPhoneEdit = false;
   Profile? _profile;
+  final ImagePicker _picker = ImagePicker();
+  final TextEditingController _phoneController = TextEditingController();
+  bool _isUpdatingProfile = false;
 
   @override
   void initState() {
     super.initState();
     _loadProfile();
+  }
+
+  @override
+  void dispose() {
+    _phoneController.dispose();
+    super.dispose();
   }
 
   void _loadProfile() {
@@ -42,6 +56,7 @@ class _SettingsPageState extends State<SettingsPage> {
               _smsNotifications = _profile?.smsNotifications ?? false;
               _pushNotifications = _profile?.pushNotifications ?? true;
               _whatsappNotifications = _profile?.whatsappNotifications ?? false;
+              _phoneController.text = _profile?.phoneNumber ?? '';
             });
           }
         });
@@ -54,11 +69,128 @@ class _SettingsPageState extends State<SettingsPage> {
     });
   }
 
-  @override
-  void dispose() {
-    // Cancel any active subscriptions
-    widget.isar.profiles.where().watch().listen((_) {}).cancel();
-    super.dispose();
+  Future<void> _pickImage() async {
+    try {
+      final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+      if (image != null && _profile != null) {
+        setState(() {
+          _isUpdatingProfile = true;
+        });
+
+        try {
+          // Update profile picture on server
+          final response = await DocumentApiService.updateProfile(
+            profilePicturePath: image.path,
+          );
+
+          if (response.statusCode == 200) {
+            // Sync with backend to get latest data
+            final syncService = SyncService();
+            await syncService.fetchAndStoreAll();
+
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Profile picture updated')),
+              );
+            }
+          } else {
+            throw Exception('Failed to update profile picture');
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Error updating profile picture: $e')),
+            );
+          }
+        } finally {
+          if (mounted) {
+            setState(() {
+              _isUpdatingProfile = false;
+            });
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error picking image: $e')));
+      }
+    }
+  }
+
+  Future<void> _updatePhoneNumber() async {
+    if (_profile == null) return;
+
+    setState(() {
+      _isUpdatingProfile = true;
+      _error = null;
+    });
+
+    try {
+      // Update phone number on server
+      final response = await DocumentApiService.updateProfile(
+        phoneNumber: _phoneController.text,
+      );
+
+      if (response.statusCode == 200) {
+        // Sync with backend to get latest data
+        final syncService = SyncService();
+        await syncService.fetchAndStoreAll();
+
+        setState(() {
+          _showPhoneEdit = false;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Phone number updated')));
+        }
+      } else {
+        throw Exception('Failed to update phone number');
+      }
+    } catch (e) {
+      setState(() {
+        _error = 'Failed to update phone number';
+      });
+    } finally {
+      setState(() {
+        _isUpdatingProfile = false;
+      });
+    }
+  }
+
+  void _showProfilePictureOptions() {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Wrap(
+            children: <Widget>[
+              ListTile(
+                leading: const Icon(Icons.visibility),
+                title: const Text('View Profile Picture'),
+                onTap: () {
+                  Navigator.pop(context);
+                  if (_profile?.profilePictureUrl != null) {
+                    OpenFilex.open(_profile!.profilePictureUrl!);
+                  }
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.edit),
+                title: const Text('Change Profile Picture'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickImage();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _saveNotificationPreferences() async {
@@ -125,17 +257,95 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _logout() async {
     try {
-      // Logout from auth service
+      // First logout from auth service
       await AuthService.logout();
 
+      // Navigate to login screen first
       if (mounted) {
         Navigator.pushReplacementNamed(context, '/login');
       }
+
+      // Close the Isar database after navigation
+      await IsarService.closeInstance();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Error during logout. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteProfile() async {
+    // Show confirmation dialog with implications
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Delete Profile'),
+            content: const Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Are you sure you want to delete your profile? This action cannot be undone.',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 16),
+                Text('This will:'),
+                SizedBox(height: 8),
+                Text('• Delete all your documents and reminders'),
+                Text('• Remove your profile and settings'),
+                Text('• Cancel any active subscriptions'),
+                Text('• Delete all your data permanently'),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text('Delete Profile'),
+              ),
+            ],
+          ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      // Show loading indicator
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Deleting profile...')));
+      }
+
+      // Delete profile from server
+      final response = await DocumentApiService.deleteProfile();
+
+      if (response.statusCode == 204) {
+        // Logout and navigate to login screen
+        await AuthService.logout();
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/login');
+        }
+        // Close the Isar database after navigation
+        await IsarService.closeInstance();
+      } else {
+        throw Exception('Failed to delete profile: ${response.statusCode}');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error deleting profile: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -159,31 +369,84 @@ class _SettingsPageState extends State<SettingsPage> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade400),
-                borderRadius: BorderRadius.circular(8),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.1),
+                    spreadRadius: 1,
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: Row(
                 children: [
-                  CircleAvatar(
-                    radius: 32,
-                    backgroundColor: Colors.grey.shade300,
-                    backgroundImage:
-                        _profile?.profilePictureUrl != null
-                            ? NetworkImage(_profile!.profilePictureUrl!)
-                            : null,
-                    child:
-                        _profile?.profilePictureUrl == null
-                            ? Text(
-                              _profile?.username
-                                      ?.substring(0, 1)
-                                      .toUpperCase() ??
-                                  'U',
-                              style: const TextStyle(
-                                fontSize: 24,
-                                color: Colors.grey,
+                  GestureDetector(
+                    onTap: _showProfilePictureOptions,
+                    child: Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 32,
+                          backgroundColor: Colors.grey.shade200,
+                          backgroundImage:
+                              _profile?.profilePictureUrl != null
+                                  ? FileImage(
+                                    File(_profile!.profilePictureUrl!),
+                                  )
+                                  : null,
+                          onBackgroundImageError: (exception, stackTrace) {
+                            print('Error loading profile image: $exception');
+                          },
+                          child:
+                              _profile?.profilePictureUrl == null
+                                  ? Text(
+                                    _profile?.username
+                                            ?.substring(0, 1)
+                                            .toUpperCase() ??
+                                        'U',
+                                    style: const TextStyle(
+                                      fontSize: 24,
+                                      color: Colors.grey,
+                                    ),
+                                  )
+                                  : null,
+                        ),
+                        if (_isUpdatingProfile)
+                          Positioned.fill(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.5),
+                                shape: BoxShape.circle,
                               ),
-                            )
-                            : null,
+                              child: const Center(
+                                child: CircularProgressIndicator(
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          )
+                        else
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).primaryColor,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.camera_alt,
+                                size: 16,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -193,15 +456,15 @@ class _SettingsPageState extends State<SettingsPage> {
                         Text(
                           _profile?.username ?? 'User',
                           style: const TextStyle(
-                            fontSize: 16,
+                            fontSize: 18,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         Text(
                           _profile?.email ?? 'No email',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 14,
-                            color: Colors.grey,
+                            color: Colors.grey[600],
                           ),
                         ),
                       ],
@@ -212,182 +475,429 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             const SizedBox(height: 24),
 
-            // Notification Preferences
-            const Text(
-              'Account Settings',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
+            // Phone Number Section
             Container(
-              height: 56,
               decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade400),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: ListTile(
-                leading: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade200,
-                    borderRadius: BorderRadius.circular(8),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.1),
+                    spreadRadius: 1,
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
                   ),
-                  child: const Icon(Icons.notifications_outlined),
-                ),
-                title: const Text(
-                  'Notification Preferences',
-                  style: TextStyle(fontSize: 14),
-                ),
-                trailing: IconButton(
-                  icon: Icon(
-                    _showNotificationEdit
-                        ? Icons.keyboard_arrow_up
-                        : Icons.keyboard_arrow_down,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      _showNotificationEdit = !_showNotificationEdit;
-                    });
-                  },
-                ),
+                ],
               ),
-            ),
-
-            // Notification Edit Section
-            if (_showNotificationEdit)
-              Container(
-                margin: const EdgeInsets.only(top: 8),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
-                  border: Border.all(color: Colors.grey.shade400),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  children: [
-                    SwitchListTile(
-                      title: const Text('Email Notifications'),
-                      subtitle: const Text('Receive notifications via email'),
-                      value: _emailNotifications,
-                      onChanged: (value) {
-                        setState(() {
-                          _emailNotifications = value;
-                        });
-                      },
-                    ),
-                    const Divider(),
-                    SwitchListTile(
-                      title: const Text('SMS Notifications'),
-                      subtitle: const Text('Receive notifications via SMS'),
-                      value: _smsNotifications,
-                      onChanged: (value) {
-                        setState(() {
-                          _smsNotifications = value;
-                        });
-                      },
-                    ),
-                    const Divider(),
-                    SwitchListTile(
-                      title: const Text('Push Notifications'),
-                      subtitle: const Text(
-                        'Receive push notifications on your device',
-                      ),
-                      value: _pushNotifications,
-                      onChanged: (value) {
-                        setState(() {
-                          _pushNotifications = value;
-                        });
-                      },
-                    ),
-                    const Divider(),
-                    SwitchListTile(
-                      title: const Text('WhatsApp Notifications'),
-                      subtitle: const Text(
-                        'Receive notifications via WhatsApp',
-                      ),
-                      value: _whatsappNotifications,
-                      onChanged: (value) {
-                        setState(() {
-                          _whatsappNotifications = value;
-                        });
-                      },
-                    ),
-                    if (_error != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: Text(
-                          _error!,
-                          style: const TextStyle(color: Colors.red),
-                        ),
-                      ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed:
-                            _isSaving ? null : _saveNotificationPreferences,
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        child:
-                            _isSaving
-                                ? const SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade100,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(Icons.phone_outlined, size: 20),
+                            ),
+                            const SizedBox(width: 12),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Phone Number',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                if (_profile?.phoneNumber != null)
+                                  Text(
+                                    _profile!.phoneNumber!,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey[600],
                                     ),
                                   ),
-                                )
-                                : const Text('Save Notifications'),
+                              ],
+                            ),
+                          ],
+                        ),
+                        IconButton(
+                          icon: Icon(
+                            _showPhoneEdit
+                                ? Icons.keyboard_arrow_up
+                                : Icons.keyboard_arrow_down,
+                            size: 20,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _showPhoneEdit = !_showPhoneEdit;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (_showPhoneEdit)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      child: Column(
+                        children: [
+                          TextField(
+                            controller: _phoneController,
+                            decoration: const InputDecoration(
+                              labelText: 'Phone Number',
+                              hintText: 'Enter your phone number',
+                              border: OutlineInputBorder(),
+                            ),
+                            keyboardType: TextInputType.phone,
+                          ),
+                          if (_error != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Text(
+                                _error!,
+                                style: const TextStyle(color: Colors.red),
+                              ),
+                            ),
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed:
+                                  _isUpdatingProfile
+                                      ? null
+                                      : _updatePhoneNumber,
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              child:
+                                  _isUpdatingProfile
+                                      ? const SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                Colors.white,
+                                              ),
+                                        ),
+                                      )
+                                      : const Text('Update Phone Number'),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
+                ],
               ),
+            ),
+            const SizedBox(height: 24),
+
+            // Notification Preferences
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.1),
+                    spreadRadius: 1,
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade100,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(
+                                Icons.notifications_outlined,
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            const Text(
+                              'Notification Preferences',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                        IconButton(
+                          icon: Icon(
+                            _showNotificationEdit
+                                ? Icons.keyboard_arrow_up
+                                : Icons.keyboard_arrow_down,
+                            size: 20,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _showNotificationEdit = !_showNotificationEdit;
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (_showNotificationEdit)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      child: Column(
+                        children: [
+                          SwitchListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: const Text('Email Notifications'),
+                            subtitle: const Text(
+                              'Receive notifications via email',
+                            ),
+                            value: _emailNotifications,
+                            onChanged: (value) {
+                              setState(() {
+                                _emailNotifications = value;
+                              });
+                            },
+                          ),
+                          const Divider(height: 1),
+                          SwitchListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: const Text('SMS Notifications'),
+                            subtitle: const Text(
+                              'Receive notifications via SMS',
+                            ),
+                            value: _smsNotifications,
+                            onChanged: (value) {
+                              setState(() {
+                                _smsNotifications = value;
+                              });
+                            },
+                          ),
+                          const Divider(height: 1),
+                          SwitchListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: const Text('Push Notifications'),
+                            subtitle: const Text(
+                              'Receive push notifications on your device',
+                            ),
+                            value: _pushNotifications,
+                            onChanged: (value) {
+                              setState(() {
+                                _pushNotifications = value;
+                              });
+                            },
+                          ),
+                          const Divider(height: 1),
+                          SwitchListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: const Text('WhatsApp Notifications'),
+                            subtitle: const Text(
+                              'Receive notifications via WhatsApp',
+                            ),
+                            value: _whatsappNotifications,
+                            onChanged: (value) {
+                              setState(() {
+                                _whatsappNotifications = value;
+                              });
+                            },
+                          ),
+                          if (_error != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Text(
+                                _error!,
+                                style: const TextStyle(color: Colors.red),
+                              ),
+                            ),
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed:
+                                  _isSaving
+                                      ? null
+                                      : _saveNotificationPreferences,
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              child:
+                                  _isSaving
+                                      ? const SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                Colors.white,
+                                              ),
+                                        ),
+                                      )
+                                      : const Text('Save Preferences'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
 
             const SizedBox(height: 24),
 
             // Subscription Info
-            const Text(
-              'Subscription',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
             Container(
-              height: 56,
               decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade400),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: ListTile(
-                leading: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade200,
-                    borderRadius: BorderRadius.circular(8),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.1),
+                    spreadRadius: 1,
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
                   ),
-                  child: const Icon(Icons.credit_card_outlined),
+                ],
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.credit_card_outlined, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${_profile?.subscriptionPlan?.toUpperCase() ?? 'FREE'} Plan',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          Text(
+                            'Active until May 15, 2025',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        // TODO: Implement subscription renewal
+                      },
+                      child: const Text('Renew'),
+                    ),
+                  ],
                 ),
-                title: Text(
-                  '${_profile?.subscriptionPlan?.toUpperCase() ?? 'FREE'} Plan',
-                  style: const TextStyle(fontSize: 14),
-                ),
-                subtitle: const Text(
-                  'Active until May 15, 2025',
-                  style: TextStyle(fontSize: 12),
-                ),
-                trailing: TextButton(
-                  onPressed: () {
-                    // TODO: Implement subscription renewal
-                  },
-                  child: const Text('Renew'),
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Delete Profile Section
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.1),
+                    spreadRadius: 1,
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.delete_outline,
+                        size: 20,
+                        color: Colors.red.shade700,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Delete Profile',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          Text(
+                            'Permanently delete your account and all data',
+                            style: TextStyle(fontSize: 14, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: _deleteProfile,
+                      style: TextButton.styleFrom(foregroundColor: Colors.red),
+                      child: const Text('Delete'),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -403,7 +913,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   backgroundColor: Colors.red,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
                 child: const Text('Logout'),

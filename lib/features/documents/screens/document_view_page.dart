@@ -6,8 +6,10 @@ import '../models/particular_model.dart';
 import '../models/reminder_model.dart';
 import 'package:path/path.dart' as path;
 import 'package:pdfrx/pdfrx.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:open_filex/open_filex.dart';
 import 'edit_document.dart';
+import '../services/document_api_service.dart';
+import '../services/sync_service.dart';
 
 class DocumentViewPage extends StatelessWidget {
   final Isar isar;
@@ -53,8 +55,18 @@ class DocumentViewPage extends StatelessWidget {
         '.doc',
         '.docx',
       ].contains(extension)) {
-        // Use share_plus to open the file
-        await Share.shareXFiles([XFile(file.path)], subject: particular.title);
+        // Use open_filex to open the file
+        final result = await OpenFilex.open(file.path);
+        if (result.type != ResultType.done) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Error opening file: ${result.message}'),
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          }
+        }
       } else {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -188,6 +200,69 @@ class DocumentViewPage extends StatelessWidget {
     } catch (e) {
       print('Error rendering PDF preview: $e');
       return _buildDocumentIcon(particular.documentPath);
+    }
+  }
+
+  Future<void> _deleteDocument(BuildContext context) async {
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Delete Document'),
+            content: const Text(
+              'Are you sure you want to delete this document? This action cannot be undone.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text('Delete'),
+              ),
+            ],
+          ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      // Show loading indicator
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Deleting document...')));
+      }
+
+      // Delete document from server
+      final response = await DocumentApiService.deleteDocument(
+        particular.docId,
+      );
+
+      if (response.statusCode != 204) {
+        throw Exception('Failed to delete document: ${response.statusCode}');
+      }
+
+      // Sync with local database
+      final syncService = SyncService();
+      await syncService.fetchAndStoreAll();
+
+      if (context.mounted) {
+        // Show success message and pop back
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Document deleted successfully')),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error deleting document: $e')));
+      }
     }
   }
 
@@ -477,6 +552,23 @@ class DocumentViewPage extends StatelessWidget {
                       ),
                     ),
                     child: const Text('Edit Document'),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // Delete Button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => _deleteDocument(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Text('Delete Document'),
                   ),
                 ),
               ],

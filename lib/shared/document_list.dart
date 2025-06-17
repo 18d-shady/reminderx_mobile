@@ -91,15 +91,27 @@ class _DocumentListState extends State<DocumentList>
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
             ),
-            margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 8),
+            margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 2),
             child: TabBar(
               controller: _tabController,
               indicator: BoxDecoration(
                 color: Theme.of(context).primaryColor,
                 borderRadius: BorderRadius.circular(12),
               ),
+              dividerColor: Colors.transparent,
               labelColor: Colors.white,
               unselectedLabelColor: Colors.black54,
+              labelStyle: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+              unselectedLabelStyle: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+              indicatorSize: TabBarIndicatorSize.tab,
+              indicatorPadding: const EdgeInsets.all(4),
+              padding: const EdgeInsets.all(4),
               tabs: const [
                 Tab(child: Center(child: Text('All'))),
                 Tab(child: Center(child: Text('Expiring Soon'))),
@@ -149,7 +161,9 @@ class _DocumentListState extends State<DocumentList>
                         itemCount: filteredParticulars.length,
                         itemBuilder: (context, index) {
                           final particular = filteredParticulars[index];
+                          final isExpired = particular.expiryDate.isBefore(now);
                           final isExpiringSoon =
+                              !isExpired &&
                               particular.expiryDate.isAfter(now) &&
                               particular.expiryDate.isBefore(thirtyDaysFromNow);
 
@@ -192,7 +206,9 @@ class _DocumentListState extends State<DocumentList>
                                           ),
                                           decoration: BoxDecoration(
                                             color:
-                                                isExpiringSoon
+                                                isExpired
+                                                    ? Colors.red[50]
+                                                    : isExpiringSoon
                                                     ? Colors.red[50]
                                                     : Colors.green[50],
                                             borderRadius: BorderRadius.circular(
@@ -200,10 +216,14 @@ class _DocumentListState extends State<DocumentList>
                                             ),
                                           ),
                                           child: Text(
-                                            'Expires: ${DateFormat('MMM dd, yyyy').format(particular.expiryDate)}',
+                                            isExpired
+                                                ? 'Expired: ${DateFormat('MMM dd, yyyy').format(particular.expiryDate)}'
+                                                : 'Expires: ${DateFormat('MMM dd, yyyy').format(particular.expiryDate)}',
                                             style: TextStyle(
                                               color:
-                                                  isExpiringSoon
+                                                  isExpired
+                                                      ? Colors.red[700]
+                                                      : isExpiringSoon
                                                       ? Colors.red[700]
                                                       : Colors.green[700],
                                               fontSize: 12,
@@ -233,7 +253,10 @@ class _DocumentListState extends State<DocumentList>
                                             value: 'view',
                                             child: Row(
                                               children: [
-                                                Icon(Icons.visibility),
+                                                Icon(
+                                                  Icons.visibility,
+                                                  color: AppColors.primary,
+                                                ),
                                                 SizedBox(width: 8),
                                                 Text('View'),
                                               ],
@@ -243,7 +266,10 @@ class _DocumentListState extends State<DocumentList>
                                             value: 'edit',
                                             child: Row(
                                               children: [
-                                                Icon(Icons.edit),
+                                                Icon(
+                                                  Icons.edit,
+                                                  color: AppColors.primary,
+                                                ),
                                                 SizedBox(width: 8),
                                                 Text('Edit'),
                                               ],
