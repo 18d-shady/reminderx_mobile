@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:isar/isar.dart';
 import 'package:intl/intl.dart';
 import '../models/notification_model.dart';
+import '../../../core/theme.dart';
 
 class NotificationsPage extends StatefulWidget {
   final Isar isar;
@@ -91,7 +92,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                               child: Text(
                                 date,
                                 style: TextStyle(
-                                  fontSize: 16,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.bold,
                                   color: primaryColor,
                                 ),
@@ -99,16 +100,19 @@ class _NotificationsPageState extends State<NotificationsPage> {
                             ),
                             ...notifications.map((notification) => Card(
                               margin: const EdgeInsets.only(bottom: 12),
+                              color: Theme.of(context).cardColor,
                               child: ListTile(
                                 leading: Icon(
                                   Icons.notifications,
-                                  color: primaryColor,
+                                  color: Theme.of(context).primaryColor,
                                 ),
                                 title: Text(
                                   notification.particularTitle,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontFamily: 'IranSans',
+                                    fontSize: 13,
                                     fontWeight: FontWeight.bold,
+                                    color: AppTheme.getTextColor(Theme.of(context).brightness == Brightness.dark),
                                   ),
                                 ),
                                 subtitle: Column(
@@ -116,13 +120,17 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                   children: [
                                     Text(
                                       notification.message,
-                                      style: const TextStyle(fontFamily: 'IranSans'),
+                                      style: TextStyle(
+                                        fontFamily: 'IranSans',
+                                        fontSize: 12,
+                                        color: AppTheme.getTextColor(Theme.of(context).brightness == Brightness.dark),
+                                      ),
                                     ),
                                     Text(
                                       DateFormat('h:mm a').format(notification.createdAt),
                                       style: TextStyle(
-                                        color: Colors.grey[600],
-                                        fontSize: 12,
+                                        color: AppTheme.getSecondaryTextColor(Theme.of(context).brightness == Brightness.dark),
+                                        fontSize: 11,
                                       ),
                                     ),
                                   ],

@@ -8,6 +8,7 @@ import 'dart:io';
 import '../features/documents/screens/edit_document.dart';
 import 'package:path/path.dart' as path;
 import 'package:pdfrx/pdfrx.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class DocumentList extends StatefulWidget {
   final Isar? isar;
@@ -21,33 +22,15 @@ class DocumentList extends StatefulWidget {
 
 class _DocumentListState extends State<DocumentList>
     with SingleTickerProviderStateMixin {
-  late TabController _tabController;
   String _selectedTab = 'All';
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
-    _tabController.addListener(() {
-      setState(() {
-        switch (_tabController.index) {
-          case 0:
-            _selectedTab = 'All';
-            break;
-          case 1:
-            _selectedTab = 'Expiring Soon';
-            break;
-          case 2:
-            _selectedTab = 'Up to Date';
-            break;
-        }
-      });
-    });
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
     super.dispose();
   }
 
@@ -56,14 +39,19 @@ class _DocumentListState extends State<DocumentList>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.description_outlined, size: 80, color: Colors.grey[400]),
+          SvgPicture.asset(
+            'assets/images/no-documents.svg',
+            width: 80,
+            height: 80,
+            colorFilter: ColorFilter.mode(Colors.grey[400]!, BlendMode.srcIn),
+          ),
           const SizedBox(height: 16),
           Text(
             widget.isar == null
                 ? 'Database not connected'
                 : 'No documents here',
             style: TextStyle(
-              fontSize: 20,
+              fontSize: 16,
               fontWeight: FontWeight.bold,
               color: Colors.grey[600],
             ),
@@ -73,7 +61,7 @@ class _DocumentListState extends State<DocumentList>
             widget.isar == null
                 ? 'Please check your connection and try again'
                 : 'Click the add button above to add documents',
-            style: TextStyle(fontSize: 16, color: Colors.grey[500]),
+            style: TextStyle(fontSize: 14, color: Colors.grey[500]),
             textAlign: TextAlign.center,
           ),
         ],
@@ -81,43 +69,49 @@ class _DocumentListState extends State<DocumentList>
     );
   }
 
+  Widget _buildTabButton(String label) {
+    final bool isSelected = _selectedTab == label;
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: OutlinedButton(
+        style: OutlinedButton.styleFrom(
+          backgroundColor: isSelected ? AppColors.secondary : Colors.white,
+          foregroundColor: isSelected ? Colors.black87 : Colors.black54,
+          side: BorderSide(color: Colors.grey[300]!, width: 1),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          textStyle: const TextStyle(fontSize: 9, fontWeight: FontWeight.w600),
+        ),
+        onPressed: () {
+          setState(() {
+            _selectedTab = label;
+          });
+        },
+        child: Text(label),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? Colors.grey[900] : Colors.white;
     return Column(
       children: [
         if (widget.showTabs)
           Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 2),
-            child: TabBar(
-              controller: _tabController,
-              indicator: BoxDecoration(
-                color: Theme.of(context).primaryColor,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              dividerColor: Colors.transparent,
-              labelColor: Colors.white,
-              unselectedLabelColor: Colors.black54,
-              labelStyle: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-              ),
-              unselectedLabelStyle: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-              ),
-              indicatorSize: TabBarIndicatorSize.tab,
-              indicatorPadding: const EdgeInsets.all(4),
-              padding: const EdgeInsets.all(4),
-              tabs: const [
-                Tab(child: Center(child: Text('All'))),
-                Tab(child: Center(child: Text('Expiring Soon'))),
-                Tab(child: Center(child: Text('Up to Date'))),
+            color: bgColor,
+            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            alignment: Alignment.centerLeft,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                _buildTabButton('All'),
+                _buildTabButton('Expiring Soon'),
+                _buildTabButton('Up to Date'),
               ],
-              isScrollable: false,
             ),
           ),
         Expanded(
@@ -156,9 +150,12 @@ class _DocumentListState extends State<DocumentList>
                         return _buildEmptyState();
                       }
 
-                      return ListView.builder(
-                        padding: const EdgeInsets.all(16),
+                      return ListView.separated(
+                        padding: const EdgeInsets.all(4),
                         itemCount: filteredParticulars.length,
+                        separatorBuilder:
+                            (context, index) =>
+                                Divider(color: Colors.grey[200], height: 1),
                         itemBuilder: (context, index) {
                           final particular = filteredParticulars[index];
                           final isExpired = particular.expiryDate.isBefore(now);
@@ -167,11 +164,25 @@ class _DocumentListState extends State<DocumentList>
                               particular.expiryDate.isAfter(now) &&
                               particular.expiryDate.isBefore(thirtyDaysFromNow);
 
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 16),
-                            color: Colors.white,
-                            child: Padding(
-                              padding: const EdgeInsets.all(12),
+                          return InkWell(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder:
+                                      (context) => DocumentViewPage(
+                                        isar: widget.isar!,
+                                        particular: particular,
+                                      ),
+                                ),
+                              );
+                            },
+                            child: Container(
+                              color: bgColor,
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 16,
+                                horizontal: 8,
+                              ),
                               child: Row(
                                 children: [
                                   // Document Image/Icon
@@ -194,7 +205,7 @@ class _DocumentListState extends State<DocumentList>
                                         Text(
                                           particular.title,
                                           style: const TextStyle(
-                                            fontSize: 14,
+                                            fontSize: 11,
                                             fontWeight: FontWeight.w600,
                                           ),
                                         ),
@@ -226,7 +237,7 @@ class _DocumentListState extends State<DocumentList>
                                                       : isExpiringSoon
                                                       ? Colors.red[700]
                                                       : Colors.green[700],
-                                              fontSize: 12,
+                                              fontSize: 8,
                                             ),
                                           ),
                                         ),
@@ -244,24 +255,16 @@ class _DocumentListState extends State<DocumentList>
                                       child: const Icon(
                                         Icons.more_vert,
                                         color: Colors.black87,
-                                        size: 20,
+                                        size: 16,
                                       ),
+                                    ),
+                                    color: Colors.white,
+                                    elevation: 8,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
                                     ),
                                     itemBuilder:
                                         (context) => [
-                                          const PopupMenuItem(
-                                            value: 'view',
-                                            child: Row(
-                                              children: [
-                                                Icon(
-                                                  Icons.visibility,
-                                                  color: AppColors.primary,
-                                                ),
-                                                SizedBox(width: 8),
-                                                Text('View'),
-                                              ],
-                                            ),
-                                          ),
                                           const PopupMenuItem(
                                             value: 'edit',
                                             child: Row(
@@ -269,27 +272,21 @@ class _DocumentListState extends State<DocumentList>
                                                 Icon(
                                                   Icons.edit,
                                                   color: AppColors.primary,
+                                                  size: 18,
                                                 ),
-                                                SizedBox(width: 8),
-                                                Text('Edit'),
+                                                SizedBox(width: 6),
+                                                Text(
+                                                  'Edit',
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
                                               ],
                                             ),
                                           ),
                                         ],
                                     onSelected: (value) {
-                                      if (value == 'view' &&
-                                          widget.isar != null) {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder:
-                                                (context) => DocumentViewPage(
-                                                  isar: widget.isar!,
-                                                  particular: particular,
-                                                ),
-                                          ),
-                                        );
-                                      } else if (value == 'edit' &&
+                                      if (value == 'edit' &&
                                           widget.isar != null) {
                                         Navigator.push(
                                           context,

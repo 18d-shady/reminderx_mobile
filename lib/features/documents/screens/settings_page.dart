@@ -8,6 +8,8 @@ import '../services/isar_service.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:open_filex/open_filex.dart';
+import '../../../core/theme.dart';
+import 'package:intl_phone_field/intl_phone_field.dart';
 
 class SettingsPage extends StatefulWidget {
   final Isar isar;
@@ -31,6 +33,9 @@ class _SettingsPageState extends State<SettingsPage> {
   final ImagePicker _picker = ImagePicker();
   final TextEditingController _phoneController = TextEditingController();
   bool _isUpdatingProfile = false;
+  String? _phoneIsoCode = 'NG';
+  bool _isPhoneValid = true;
+  String _internationalPhone = '';
 
   @override
   void initState() {
@@ -120,7 +125,7 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _updatePhoneNumber() async {
-    if (_profile == null) return;
+    if (_profile == null || !_isPhoneValid) return;
 
     setState(() {
       _isUpdatingProfile = true;
@@ -128,9 +133,12 @@ class _SettingsPageState extends State<SettingsPage> {
     });
 
     try {
-      // Update phone number on server
+      // Always send phone number in international format using IntlPhoneField value
+      final phoneNumber = _internationalPhone.isNotEmpty
+          ? _internationalPhone
+          : _phoneController.text;
       final response = await DocumentApiService.updateProfile(
-        phoneNumber: _phoneController.text,
+        phoneNumber: phoneNumber,
       );
 
       if (response.statusCode == 200) {
@@ -359,6 +367,8 @@ class _SettingsPageState extends State<SettingsPage> {
       return const Center(child: CircularProgressIndicator());
     }
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -369,11 +379,14 @@ class _SettingsPageState extends State<SettingsPage> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.grey.withOpacity(0.1),
+                    color:
+                        isDark
+                            ? Colors.black.withOpacity(0.2)
+                            : Colors.grey.withOpacity(0.1),
                     spreadRadius: 1,
                     blurRadius: 4,
                     offset: const Offset(0, 2),
@@ -388,16 +401,24 @@ class _SettingsPageState extends State<SettingsPage> {
                       children: [
                         CircleAvatar(
                           radius: 32,
-                          backgroundColor: Colors.grey.shade200,
+                          backgroundColor:
+                              isDark
+                                  ? AppColors.darkSurface
+                                  : Colors.grey.shade200,
                           backgroundImage:
                               _profile?.profilePictureUrl != null
                                   ? FileImage(
                                     File(_profile!.profilePictureUrl!),
                                   )
                                   : null,
-                          onBackgroundImageError: (exception, stackTrace) {
-                            print('Error loading profile image: $exception');
-                          },
+                          onBackgroundImageError:
+                              _profile?.profilePictureUrl != null
+                                  ? (exception, stackTrace) {
+                                    print(
+                                      'Error loading profile image: $exception',
+                                    );
+                                  }
+                                  : null,
                           child:
                               _profile?.profilePictureUrl == null
                                   ? Text(
@@ -405,9 +426,11 @@ class _SettingsPageState extends State<SettingsPage> {
                                             ?.substring(0, 1)
                                             .toUpperCase() ??
                                         'U',
-                                    style: const TextStyle(
-                                      fontSize: 24,
-                                      color: Colors.grey,
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      color: AppTheme.getSecondaryTextColor(
+                                        isDark,
+                                      ),
                                     ),
                                   )
                                   : null,
@@ -455,16 +478,17 @@ class _SettingsPageState extends State<SettingsPage> {
                       children: [
                         Text(
                           _profile?.username ?? 'User',
-                          style: const TextStyle(
-                            fontSize: 18,
+                          style: TextStyle(
+                            fontSize: 14,
                             fontWeight: FontWeight.bold,
+                            color: AppTheme.getTextColor(isDark),
                           ),
                         ),
                         Text(
                           _profile?.email ?? 'No email',
                           style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[600],
+                            fontSize: 12,
+                            color: AppTheme.getSecondaryTextColor(isDark),
                           ),
                         ),
                       ],
@@ -478,11 +502,14 @@ class _SettingsPageState extends State<SettingsPage> {
             // Phone Number Section
             Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.grey.withOpacity(0.1),
+                    color:
+                        isDark
+                            ? Colors.black.withOpacity(0.2)
+                            : Colors.grey.withOpacity(0.1),
                     spreadRadius: 1,
                     blurRadius: 4,
                     offset: const Offset(0, 2),
@@ -503,7 +530,10 @@ class _SettingsPageState extends State<SettingsPage> {
                               width: 36,
                               height: 36,
                               decoration: BoxDecoration(
-                                color: Colors.grey.shade100,
+                                color:
+                                    isDark
+                                        ? AppColors.darkSurface
+                                        : Colors.grey.shade100,
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: const Icon(Icons.phone_outlined, size: 20),
@@ -512,19 +542,22 @@ class _SettingsPageState extends State<SettingsPage> {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
+                                Text(
                                   'Phone Number',
                                   style: TextStyle(
-                                    fontSize: 16,
+                                    fontSize: 13,
                                     fontWeight: FontWeight.w500,
+                                    color: AppTheme.getTextColor(isDark),
                                   ),
                                 ),
                                 if (_profile?.phoneNumber != null)
                                   Text(
                                     _profile!.phoneNumber!,
                                     style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.grey[600],
+                                      fontSize: 12,
+                                      color: AppTheme.getSecondaryTextColor(
+                                        isDark,
+                                      ),
                                     ),
                                   ),
                               ],
@@ -552,14 +585,32 @@ class _SettingsPageState extends State<SettingsPage> {
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                       child: Column(
                         children: [
-                          TextField(
+                          IntlPhoneField(
+                            initialCountryCode: 'NG',
                             controller: _phoneController,
                             decoration: const InputDecoration(
                               labelText: 'Phone Number',
-                              hintText: 'Enter your phone number',
                               border: OutlineInputBorder(),
                             ),
-                            keyboardType: TextInputType.phone,
+                            onChanged: (phone) {
+                              setState(() {
+                                _phoneController.text = phone.completeNumber;
+                                _phoneIsoCode = phone.countryISOCode;
+                                _isPhoneValid = phone.isValidNumber();
+                                _internationalPhone = phone.completeNumber;
+                              });
+                            },
+                            onCountryChanged: (country) {
+                              setState(() {
+                                _phoneIsoCode = country.code;
+                              });
+                            },
+                            validator: (phone) {
+                              if (phone == null || !phone.isValidNumber()) {
+                                return 'Please enter a valid phone number';
+                              }
+                              return null;
+                            },
                           ),
                           if (_error != null)
                             Padding(
@@ -573,10 +624,9 @@ class _SettingsPageState extends State<SettingsPage> {
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
-                              onPressed:
-                                  _isUpdatingProfile
-                                      ? null
-                                      : _updatePhoneNumber,
+                              onPressed: _isUpdatingProfile || !_isPhoneValid
+                                  ? null
+                                  : _updatePhoneNumber,
                               style: ElevatedButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 12,
@@ -612,11 +662,14 @@ class _SettingsPageState extends State<SettingsPage> {
             // Notification Preferences
             Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.grey.withOpacity(0.1),
+                    color:
+                        isDark
+                            ? Colors.black.withOpacity(0.2)
+                            : Colors.grey.withOpacity(0.1),
                     spreadRadius: 1,
                     blurRadius: 4,
                     offset: const Offset(0, 2),
@@ -637,7 +690,10 @@ class _SettingsPageState extends State<SettingsPage> {
                               width: 36,
                               height: 36,
                               decoration: BoxDecoration(
-                                color: Colors.grey.shade100,
+                                color:
+                                    isDark
+                                        ? AppColors.darkSurface
+                                        : Colors.grey.shade100,
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: const Icon(
@@ -646,11 +702,12 @@ class _SettingsPageState extends State<SettingsPage> {
                               ),
                             ),
                             const SizedBox(width: 12),
-                            const Text(
+                            Text(
                               'Notification Preferences',
                               style: TextStyle(
-                                fontSize: 16,
+                                fontSize: 13,
                                 fontWeight: FontWeight.w500,
+                                color: AppTheme.getTextColor(isDark),
                               ),
                             ),
                           ],
@@ -781,13 +838,17 @@ class _SettingsPageState extends State<SettingsPage> {
             const SizedBox(height: 24),
 
             // Subscription Info
+            /*
             Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.grey.withOpacity(0.1),
+                    color:
+                        isDark
+                            ? Colors.black.withOpacity(0.2)
+                            : Colors.grey.withOpacity(0.1),
                     spreadRadius: 1,
                     blurRadius: 4,
                     offset: const Offset(0, 2),
@@ -802,7 +863,10 @@ class _SettingsPageState extends State<SettingsPage> {
                       width: 36,
                       height: 36,
                       decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
+                        color:
+                            isDark
+                                ? AppColors.darkSurface
+                                : Colors.grey.shade100,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Icon(Icons.credit_card_outlined, size: 20),
@@ -814,16 +878,17 @@ class _SettingsPageState extends State<SettingsPage> {
                         children: [
                           Text(
                             '${_profile?.subscriptionPlan?.toUpperCase() ?? 'FREE'} Plan',
-                            style: const TextStyle(
-                              fontSize: 16,
+                            style: TextStyle(
+                              fontSize: 13,
                               fontWeight: FontWeight.w500,
+                              color: AppTheme.getTextColor(isDark),
                             ),
                           ),
                           Text(
                             'Active until May 15, 2025',
                             style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[600],
+                              fontSize: 12,
+                              color: AppTheme.getSecondaryTextColor(isDark),
                             ),
                           ),
                         ],
@@ -841,15 +906,19 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
 
             const SizedBox(height: 24),
+          */
 
             // Delete Profile Section
             Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.grey.withOpacity(0.1),
+                    color:
+                        isDark
+                            ? Colors.black.withOpacity(0.2)
+                            : Colors.grey.withOpacity(0.1),
                     spreadRadius: 1,
                     blurRadius: 4,
                     offset: const Offset(0, 2),
@@ -864,7 +933,10 @@ class _SettingsPageState extends State<SettingsPage> {
                       width: 36,
                       height: 36,
                       decoration: BoxDecoration(
-                        color: Colors.red.shade50,
+                        color:
+                            isDark
+                                ? AppColors.darkSurface
+                                : AppColors.lightCard,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
@@ -874,20 +946,24 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             'Delete Profile',
                             style: TextStyle(
-                              fontSize: 16,
+                              fontSize: 13,
                               fontWeight: FontWeight.w500,
+                              color: AppTheme.getTextColor(isDark),
                             ),
                           ),
                           Text(
                             'Permanently delete your account and all data',
-                            style: TextStyle(fontSize: 14, color: Colors.grey),
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: AppTheme.getSecondaryTextColor(isDark),
+                            ),
                           ),
                         ],
                       ),
@@ -895,7 +971,10 @@ class _SettingsPageState extends State<SettingsPage> {
                     TextButton(
                       onPressed: _deleteProfile,
                       style: TextButton.styleFrom(foregroundColor: Colors.red),
-                      child: const Text('Delete'),
+                      child: const Text(
+                        'Delete',
+                        style: TextStyle(fontSize: 11),
+                      ),
                     ),
                   ],
                 ),

@@ -1,4 +1,4 @@
-package com.example.reminderx_mobile
+package com.reminderx.naikas
 
 import io.flutter.embedding.android.FlutterActivity
 

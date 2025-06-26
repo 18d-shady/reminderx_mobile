@@ -4,6 +4,7 @@ import 'package:isar/isar.dart';
 import 'package:intl/intl.dart';
 import '../models/particular_model.dart';
 import '../models/reminder_model.dart';
+import '../../../core/theme.dart';
 
 class CalendarPage extends StatefulWidget {
   final Isar isar;
@@ -101,14 +102,14 @@ class _CalendarPageState extends State<CalendarPage> {
       );
 
       // Add recurring reminders if applicable
-      if (reminder.recurrence != null && reminder.recurrence != 'none') {
+      if (reminder.recurrence != 'none') {
         final expiryDate = particular.expiryDate;
         var currentDate = reminder.scheduledDate;
-        
+
         // Calculate start date based on start_days_before
-        if (reminder.startDaysBefore != null) {
-          currentDate = expiryDate.subtract(Duration(days: reminder.startDaysBefore!));
-        }
+        currentDate = expiryDate.subtract(
+          Duration(days: reminder.startDaysBefore),
+        );
 
         while (currentDate.isBefore(expiryDate)) {
           if (reminder.recurrence == 'daily') {
@@ -215,7 +216,17 @@ class _CalendarPageState extends State<CalendarPage> {
                 color: Theme.of(context).primaryColor.withOpacity(0.3),
                 shape: BoxShape.circle,
               ),
-              weekendTextStyle: const TextStyle(color: Colors.black),
+              weekendTextStyle: TextStyle(
+                color: AppTheme.getTextColor(
+                  Theme.of(context).brightness == Brightness.dark,
+                ),
+                fontSize: 10,
+              ),
+              defaultTextStyle: const TextStyle(fontSize: 10),
+              outsideTextStyle: const TextStyle(
+                fontSize: 9,
+                color: Colors.grey,
+              ),
               outsideDaysVisible: false,
             ),
             headerStyle: HeaderStyle(
@@ -231,7 +242,7 @@ class _CalendarPageState extends State<CalendarPage> {
               ),
               titleTextStyle: TextStyle(
                 color: Theme.of(context).primaryColor,
-                fontSize: 16,
+                fontSize: 12,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -255,9 +266,11 @@ class _CalendarPageState extends State<CalendarPage> {
                             decoration: BoxDecoration(
                               color:
                                   event.type == EventType.expiry
-                                      ? (event.isExpiringSoon
-                                          ? Colors.red.withOpacity(0.1)
-                                          : Colors.grey.withOpacity(0.1))
+                                      ? AppTheme.getExpiryColor(
+                                        event.isExpiringSoon,
+                                        Theme.of(context).brightness ==
+                                            Brightness.dark,
+                                      ).withOpacity(0.1)
                                       : Theme.of(
                                         context,
                                       ).primaryColor.withOpacity(0.1),
@@ -271,9 +284,11 @@ class _CalendarPageState extends State<CalendarPage> {
                                 fontSize: 8,
                                 color:
                                     event.type == EventType.expiry
-                                        ? (event.isExpiringSoon
-                                            ? Colors.red
-                                            : Colors.grey)
+                                        ? AppTheme.getExpiryColor(
+                                          event.isExpiringSoon,
+                                          Theme.of(context).brightness ==
+                                              Brightness.dark,
+                                        )
                                         : Theme.of(context).primaryColor,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -306,7 +321,7 @@ class _CalendarPageState extends State<CalendarPage> {
                           '${events.length} due',
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 10,
+                            fontSize: 8,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -325,104 +340,155 @@ class _CalendarPageState extends State<CalendarPage> {
                   ? Center(
                     child: Text(
                       'No events for selected date',
-                      style: TextStyle(color: Colors.grey[600]),
+                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
                     ),
                   )
                   : ListView.builder(
                     itemCount: _selectedEvents.length,
                     itemBuilder: (context, index) {
                       final event = _selectedEvents[index];
-                      return Card(
-                        color: Colors.white,
-                        margin: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
+                      return Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 16),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        decoration: BoxDecoration(
+                          border: Border(
+                            bottom: BorderSide(
+                              color: Colors.grey[300]!,
+                              width: 1,
+                            ),
+                          ),
                         ),
-                        child: ListTile(
-                          leading: Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color:
-                                  event.type == EventType.expiry
-                                      ? (event.isExpiringSoon
-                                          ? Colors.red.withOpacity(0.1)
-                                          : Colors.grey.withOpacity(0.1))
-                                      : Theme.of(
-                                        context,
-                                      ).primaryColor.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Icon(
-                              event.type == EventType.expiry
-                                  ? Icons.event
-                                  : Icons.notifications,
-                              color:
-                                  event.type == EventType.expiry
-                                      ? (event.isExpiringSoon
-                                          ? Colors.red
-                                          : Colors.grey)
-                                      : Theme.of(context).primaryColor,
-                            ),
-                          ),
-                          title: Text(
-                            event.title,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(height: 4),
-                              Text(
-                                DateFormat('h:mm a').format(event.date),
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 12,
-                                ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color:
+                                    event.type == EventType.expiry
+                                        ? AppTheme.getExpiryColor(
+                                          event.isExpiringSoon,
+                                          Theme.of(context).brightness ==
+                                              Brightness.dark,
+                                        ).withOpacity(0.1)
+                                        : Theme.of(
+                                          context,
+                                        ).primaryColor.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
                               ),
-                              if (event.type == EventType.expiry &&
-                                  event.isExpiringSoon)
-                                Container(
-                                  margin: const EdgeInsets.only(top: 4),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.red.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: const Text(
-                                    'Expiring Soon',
+                              child: Icon(
+                                event.type == EventType.expiry
+                                    ? Icons.event
+                                    : Icons.notifications,
+                                color:
+                                    event.type == EventType.expiry
+                                        ? AppTheme.getExpiryColor(
+                                          event.isExpiringSoon,
+                                          Theme.of(context).brightness ==
+                                              Brightness.dark,
+                                        )
+                                        : Theme.of(context).primaryColor,
+                                size: 18,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    event.title,
                                     style: TextStyle(
-                                      color: Colors.red,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                      height: 1.2,
+                                      color:
+                                          Theme.of(context).brightness ==
+                                                  Brightness.dark
+                                              ? Colors.grey[200]
+                                              : Colors.grey[800],
                                     ),
                                   ),
-                                ),
-                              if (event.recurrence != null && event.recurrence != 'none')
-                                Container(
-                                  margin: const EdgeInsets.only(top: 4),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(context).primaryColor.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Text(
-                                    'Recurrence: ${event.recurrence}',
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    DateFormat('h:mm a').format(event.date),
                                     style: TextStyle(
-                                      color: Theme.of(context).primaryColor,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
+                                      color: AppTheme.getSecondaryTextColor(
+                                        Theme.of(context).brightness ==
+                                            Brightness.dark,
+                                      ),
+                                      fontSize: 11,
+                                      height: 1.2,
                                     ),
                                   ),
-                                ),
-                            ],
-                          ),
+                                  if (event.type == EventType.expiry &&
+                                      event.isExpiringSoon)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 8.0),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: AppTheme.getExpiryColor(
+                                            event.isExpiringSoon,
+                                            Theme.of(context).brightness ==
+                                                Brightness.dark,
+                                          ).withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          'Expiring Soon',
+                                          style: TextStyle(
+                                            color: AppTheme.getExpiryColor(
+                                              event.isExpiringSoon,
+                                              Theme.of(context).brightness ==
+                                                  Brightness.dark,
+                                            ),
+                                            fontSize: 11,
+                                            height: 1.2,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  if (event.recurrence != null &&
+                                      event.recurrence != 'none')
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 8.0),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Theme.of(
+                                            context,
+                                          ).primaryColor.withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          'Recurrence: ${event.recurrence}',
+                                          style: TextStyle(
+                                            color:
+                                                Theme.of(context).primaryColor,
+                                            fontSize: 11,
+                                            height: 1.2,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       );
                     },
@@ -441,86 +507,130 @@ class _CalendarPageState extends State<CalendarPage> {
       itemCount: allEvents.length,
       itemBuilder: (context, index) {
         final event = allEvents[index];
-        return Card(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          color: Colors.white,
-          child: ListTile(
-            leading: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color:
-                    event.type == EventType.expiry
-                        ? (event.isExpiringSoon
-                            ? Colors.red.withOpacity(0.1)
-                            : Colors.grey.withOpacity(0.1))
-                        : Theme.of(context).primaryColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                event.type == EventType.expiry
-                    ? Icons.event
-                    : Icons.notifications,
-                color:
-                    event.type == EventType.expiry
-                        ? (event.isExpiringSoon ? Colors.red : Colors.grey)
-                        : Theme.of(context).primaryColor,
-              ),
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(color: Colors.grey[300]!, width: 1),
             ),
-            title: Text(
-              event.title,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 4),
-                Text(
-                  DateFormat('MMM dd, yyyy h:mm a').format(event.date),
-                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color:
+                      event.type == EventType.expiry
+                          ? AppTheme.getExpiryColor(
+                            event.isExpiringSoon,
+                            Theme.of(context).brightness == Brightness.dark,
+                          ).withOpacity(0.1)
+                          : Theme.of(context).primaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                if (event.type == EventType.expiry && event.isExpiringSoon)
-                  Container(
-                    margin: const EdgeInsets.only(top: 4),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: const Text(
-                      'Expiring Soon',
+                child: Icon(
+                  event.type == EventType.expiry
+                      ? Icons.event
+                      : Icons.notifications,
+                  color:
+                      event.type == EventType.expiry
+                          ? AppTheme.getExpiryColor(
+                            event.isExpiringSoon,
+                            Theme.of(context).brightness == Brightness.dark,
+                          )
+                          : Theme.of(context).primaryColor,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      event.title,
                       style: TextStyle(
-                        color: Colors.red,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                        height: 1.2,
+                        color:
+                            Theme.of(context).brightness == Brightness.dark
+                                ? Colors.grey[200]
+                                : Colors.grey[800],
                       ),
                     ),
-                  ),
-                if (event.recurrence != null && event.recurrence != 'none')
-                  Container(
-                    margin: const EdgeInsets.only(top: 4),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).primaryColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      'Recurrence: ${event.recurrence}',
+                    const SizedBox(height: 6),
+                    Text(
+                      DateFormat('MMM dd, yyyy h:mm a').format(event.date),
                       style: TextStyle(
-                        color: Theme.of(context).primaryColor,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+                        color: AppTheme.getSecondaryTextColor(
+                          Theme.of(context).brightness == Brightness.dark,
+                        ),
+                        fontSize: 11,
+                        height: 1.2,
                       ),
                     ),
-                  ),
-              ],
-            ),
+                    if (event.type == EventType.expiry && event.isExpiringSoon)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppTheme.getExpiryColor(
+                              event.isExpiringSoon,
+                              Theme.of(context).brightness == Brightness.dark,
+                            ).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'Expiring Soon',
+                            style: TextStyle(
+                              color: AppTheme.getExpiryColor(
+                                event.isExpiringSoon,
+                                Theme.of(context).brightness == Brightness.dark,
+                              ),
+                              fontSize: 11,
+                              height: 1.2,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    if (event.recurrence != null && event.recurrence != 'none')
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Theme.of(
+                              context,
+                            ).primaryColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'Recurrence: ${event.recurrence}',
+                            style: TextStyle(
+                              color: Theme.of(context).primaryColor,
+                              fontSize: 11,
+                              height: 1.2,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
           ),
         );
       },

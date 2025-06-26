@@ -10,6 +10,7 @@ import 'package:open_filex/open_filex.dart';
 import 'edit_document.dart';
 import '../services/document_api_service.dart';
 import '../services/sync_service.dart';
+import '../../../core/theme.dart';
 
 class DocumentViewPage extends StatelessWidget {
   final Isar isar;
@@ -271,7 +272,7 @@ class DocumentViewPage extends StatelessWidget {
     final now = DateTime.now();
     final thirtyDaysFromNow = now.add(const Duration(days: 30));
     final isExpiringSoon = particular.expiryDate.isBefore(thirtyDaysFromNow);
-    //final daysUntilExpiry = particular.expiryDate.difference(now).inDays;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Document Details')),
@@ -307,11 +308,14 @@ class DocumentViewPage extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).cardColor,
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.grey.withOpacity(0.1),
+                        color:
+                            isDark
+                                ? Colors.black.withOpacity(0.2)
+                                : Colors.grey.withOpacity(0.1),
                         spreadRadius: 1,
                         blurRadius: 4,
                         offset: const Offset(0, 2),
@@ -336,9 +340,10 @@ class DocumentViewPage extends StatelessWidget {
                           Expanded(
                             child: Text(
                               particular.title,
-                              style: const TextStyle(
-                                fontSize: 18,
+                              style: TextStyle(
+                                fontSize: 14,
                                 fontWeight: FontWeight.bold,
+                                color: AppTheme.getTextColor(isDark),
                               ),
                             ),
                           ),
@@ -349,10 +354,10 @@ class DocumentViewPage extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color:
-                              isExpiringSoon
-                                  ? Colors.red.withOpacity(0.1)
-                                  : Colors.green.withOpacity(0.1),
+                          color: AppTheme.getExpiryColor(
+                            isExpiringSoon,
+                            isDark,
+                          ).withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
@@ -361,11 +366,13 @@ class DocumentViewPage extends StatelessWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
+                                  Text(
                                     'Expires in',
                                     style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.grey,
+                                      fontSize: 11,
+                                      color: AppTheme.getSecondaryTextColor(
+                                        isDark,
+                                      ),
                                     ),
                                   ),
                                   const SizedBox(height: 4),
@@ -374,12 +381,12 @@ class DocumentViewPage extends StatelessWidget {
                                       'MMM dd, yyyy',
                                     ).format(particular.expiryDate),
                                     style: TextStyle(
-                                      fontSize: 16,
+                                      fontSize: 12,
                                       fontWeight: FontWeight.bold,
-                                      color:
-                                          isExpiringSoon
-                                              ? Colors.red
-                                              : Colors.green,
+                                      color: AppTheme.getExpiryColor(
+                                        isExpiringSoon,
+                                        isDark,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -389,7 +396,10 @@ class DocumentViewPage extends StatelessWidget {
                               isExpiringSoon
                                   ? Icons.warning
                                   : Icons.check_circle,
-                              color: isExpiringSoon ? Colors.red : Colors.green,
+                              color: AppTheme.getExpiryColor(
+                                isExpiringSoon,
+                                isDark,
+                              ),
                               size: 24,
                             ),
                           ],
@@ -400,19 +410,26 @@ class DocumentViewPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
                 // Document Details Section
-                const Text(
+                Text(
                   'Document Details',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.getTextColor(isDark),
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).cardColor,
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.grey.withOpacity(0.1),
+                        color:
+                            isDark
+                                ? Colors.black.withOpacity(0.2)
+                                : Colors.grey.withOpacity(0.1),
                         spreadRadius: 1,
                         blurRadius: 4,
                         offset: const Offset(0, 2),
@@ -421,19 +438,24 @@ class DocumentViewPage extends StatelessWidget {
                   ),
                   child: Column(
                     children: [
-                      _buildDetailRow('Document Name', particular.title),
+                      _buildDetailRow(
+                        context,
+                        'Document Name',
+                        particular.title,
+                      ),
                       const Divider(),
                       _buildDetailRow(
+                        context,
                         'Expiry Date',
                         DateFormat(
                           'MMM dd, yyyy',
                         ).format(particular.expiryDate),
                       ),
                       const Divider(),
-                      _buildDetailRow('Category', particular.category),
+                      _buildDetailRow(context, 'Category', particular.category),
                       if (particular.notes?.isNotEmpty ?? false) ...[
                         const Divider(),
-                        _buildDetailRow('Notes', particular.notes!),
+                        _buildDetailRow(context, 'Notes', particular.notes!),
                       ],
                     ],
                   ),
@@ -441,19 +463,26 @@ class DocumentViewPage extends StatelessWidget {
                 const SizedBox(height: 24),
                 // Reminders Section
                 if (reminders.isNotEmpty) ...[
-                  const Text(
+                  Text(
                     'Reminders',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.getTextColor(isDark),
+                    ),
                   ),
                   const SizedBox(height: 16),
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).cardColor,
                       borderRadius: BorderRadius.circular(12),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.grey.withOpacity(0.1),
+                          color:
+                              isDark
+                                  ? Colors.black.withOpacity(0.2)
+                                  : Colors.grey.withOpacity(0.1),
                           spreadRadius: 1,
                           blurRadius: 4,
                           offset: const Offset(0, 2),
@@ -467,6 +496,7 @@ class DocumentViewPage extends StatelessWidget {
                                 (reminder) => Column(
                                   children: [
                                     _buildDetailRow(
+                                      context,
                                       'Reminder Date',
                                       DateFormat(
                                         'MMM dd, yyyy h:mm a',
@@ -477,11 +507,14 @@ class DocumentViewPage extends StatelessWidget {
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        const Text(
+                                        Text(
                                           'Methods',
                                           style: TextStyle(
-                                            fontSize: 14,
-                                            color: Colors.grey,
+                                            fontSize: 11,
+                                            color:
+                                                AppTheme.getSecondaryTextColor(
+                                                  isDark,
+                                                ),
                                           ),
                                         ),
                                         const SizedBox(height: 8),
@@ -495,14 +528,20 @@ class DocumentViewPage extends StatelessWidget {
                                                 Icon(
                                                   _getMethodIcon(method),
                                                   size: 16,
-                                                  color: Colors.grey[600],
+                                                  color: AppTheme.getTextColor(
+                                                    isDark,
+                                                  ),
                                                 ),
                                                 const SizedBox(width: 8),
                                                 Text(
                                                   method.toUpperCase(),
-                                                  style: const TextStyle(
-                                                    fontSize: 14,
+                                                  style: TextStyle(
+                                                    fontSize: 10,
                                                     fontWeight: FontWeight.w500,
+                                                    color:
+                                                        AppTheme.getTextColor(
+                                                          isDark,
+                                                        ),
                                                   ),
                                                 ),
                                               ],
@@ -515,6 +554,7 @@ class DocumentViewPage extends StatelessWidget {
                                         false) ...[
                                       const Divider(),
                                       _buildDetailRow(
+                                        context,
                                         'Message',
                                         reminder.reminderMessage!,
                                       ),
@@ -579,16 +619,27 @@ class DocumentViewPage extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
+  Widget _buildDetailRow(BuildContext context, String label, String value) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontSize: 14, color: Colors.grey)),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: AppTheme.getSecondaryTextColor(isDark),
+            ),
+          ),
           Text(
             value,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: AppTheme.getTextColor(isDark),
+            ),
           ),
         ],
       ),

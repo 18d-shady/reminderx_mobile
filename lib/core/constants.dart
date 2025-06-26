@@ -1,5 +1,7 @@
+/*
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+
 
 String get baseUrl {
   if (kDebugMode) {
@@ -17,6 +19,6 @@ String get baseUrl {
   // Production URL
   return 'https://your-production-api.com/';
 }
-
-//const String baseUrl = 'http://10.0.2.2:8000/';
+*/
+const String baseUrl = 'https://naikas.com/';
 // Add other constants here

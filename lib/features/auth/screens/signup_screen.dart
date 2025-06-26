@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:reminderx_mobile/features/auth/services/auth_service.dart';
-import 'package:reminderx_mobile/features/documents/screens/main_screen.dart';
 import 'package:reminderx_mobile/features/auth/exceptions/auth_exceptions.dart';
-import 'package:reminderx_mobile/features/documents/services/sync_service.dart';
+import 'package:reminderx_mobile/features/auth/screens/email_verification.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -19,6 +18,54 @@ class _SignupScreenState extends State<SignupScreen> {
       TextEditingController();
   bool isLoading = false;
   String? errorMessage;
+  String? usernameError;
+  String? emailError;
+
+  void _sendOtpAndShowModal() async {
+    setState(() {
+      errorMessage = null;
+      usernameError = null;
+      emailError = null;
+      isLoading = true;
+    });
+    try {
+      await AuthService().sendVerificationEmail(
+        usernameController.text.trim(),
+        emailController.text.trim(),
+      );
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder:
+                (context) => EmailVerificationScreen(
+                  username: usernameController.text.trim(),
+                  email: emailController.text.trim(),
+                  password: passwordController.text.trim(),
+                ),
+          ),
+        );
+      }
+    } on AuthException catch (e) {
+      setState(() {
+        if (e.code == 'USERNAME_EXISTS') {
+          usernameError = e.message;
+        } else if (e.code == 'EMAIL_EXISTS') {
+          emailError = e.message;
+        } else {
+          errorMessage = e.message;
+        }
+      });
+    } catch (e) {
+      setState(() {
+        errorMessage = 'Failed to send verification email. Please try again.';
+      });
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
 
   void _signup() async {
     // Validate inputs
@@ -39,15 +86,15 @@ class _SignupScreenState extends State<SignupScreen> {
       return;
     }
 
-    if (passwordController.text.length < 5) {
+    if (passwordController.text.length < 5 || !RegExp(r'\d').hasMatch(passwordController.text)) {
       setState(() {
-        errorMessage = 'Password must be at least 8 characters long';
+        errorMessage = 'Password must be at least 6 characters and contain a number';
       });
       return;
     }
 
     if (!RegExp(
-      r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+      r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}\$',
     ).hasMatch(emailController.text)) {
       setState(() {
         errorMessage = 'Please enter a valid email address';
@@ -55,41 +102,8 @@ class _SignupScreenState extends State<SignupScreen> {
       return;
     }
 
-    setState(() {
-      isLoading = true;
-      errorMessage = null;
-    });
-
-    try {
-      final success = await AuthService().register(
-        usernameController.text.trim(),
-        emailController.text.trim(),
-        passwordController.text.trim(),
-      );
-
-      if (success && mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const MainScreen()),
-        );
-        SyncService().fetchAndStoreAll();
-      }
-    } on NetworkException {
-      setState(() {
-        errorMessage =
-            'Network connection error. Please check your internet connection.';
-      });
-    } on AuthException catch (e) {
-      setState(() {
-        errorMessage = e.message;
-      });
-    } finally {
-      if (mounted) {
-        setState(() {
-          isLoading = false;
-        });
-      }
-    }
+    // Instead of registering, send OTP and show modal
+    _sendOtpAndShowModal();
   }
 
   @override
@@ -112,29 +126,36 @@ class _SignupScreenState extends State<SignupScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Logo
-                  RichText(
-                    text: TextSpan(
-                      children: [
-                        const TextSpan(
-                          text: "REMINDER",
-                          style: TextStyle(
-                            fontSize: 20,
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: "InknutAntiqua",
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        margin: const EdgeInsets.only(right: 8),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          color: Colors.white,
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.asset(
+                            'assets/images/naikas_icon.png',
+                            fit: BoxFit.cover,
                           ),
                         ),
-                        TextSpan(
-                          text: "X",
-                          style: TextStyle(
-                            fontSize: 26,
-                            color: primaryColor,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: "InknutAntiqua",
-                          ),
+                      ),
+                      const Text(
+                        'NAIKAS',
+                        style: TextStyle(
+                          fontSize: 22,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: "InknutAntiqua",
+                          letterSpacing: 1.5,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 60),
                   // Welcome Message
@@ -180,6 +201,14 @@ class _SignupScreenState extends State<SignupScreen> {
                       ),
                     ),
                   ),
+                  if (usernameError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4.0, left: 4.0),
+                      child: Text(
+                        usernameError!,
+                        style: const TextStyle(color: Colors.red, fontSize: 12),
+                      ),
+                    ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: emailController,
@@ -198,6 +227,14 @@ class _SignupScreenState extends State<SignupScreen> {
                       ),
                     ),
                   ),
+                  if (emailError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4.0, left: 4.0),
+                      child: Text(
+                        emailError!,
+                        style: const TextStyle(color: Colors.red, fontSize: 12),
+                      ),
+                    ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: passwordController,

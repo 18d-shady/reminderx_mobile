@@ -7,6 +7,8 @@ class TopBar extends StatelessWidget {
   final int notificationCount;
   final VoidCallback onNotificationTap;
   final VoidCallback onAddTap;
+  final VoidCallback onSyncTap;
+  final bool isSyncing;
 
   const TopBar({
     super.key,
@@ -15,12 +17,14 @@ class TopBar extends StatelessWidget {
     this.notificationCount = 0,
     required this.onNotificationTap,
     required this.onAddTap,
+    required this.onSyncTap,
+    required this.isSyncing,
   });
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
       child: Row(
         children: [
           // Profile Section
@@ -34,16 +38,16 @@ class TopBar extends StatelessWidget {
                   Text(
                     userName,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'InriaSans',
-                        ),
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'InriaSans',
+                    ),
                   ),
                   Text(
                     'Welcome Back',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.grey[600],
-                          fontFamily: 'InriaSans',
-                        ),
+                      color: Colors.grey[600],
+                      fontFamily: 'InriaSans',
+                    ),
                   ),
                 ],
               ),
@@ -53,11 +57,14 @@ class TopBar extends StatelessWidget {
           // Action Buttons
           Row(
             children: [
+              // Sync Button
+              _SyncIconButton(onTap: onSyncTap, isSyncing: isSyncing),
+              const SizedBox(width: 8),
               // Notification Button
               Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(25),
+                  borderRadius: BorderRadius.circular(100),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.1),
@@ -70,28 +77,33 @@ class TopBar extends StatelessWidget {
                   children: [
                     IconButton(
                       onPressed: onNotificationTap,
-                      icon: const Icon(Icons.notifications_outlined),
+                      icon: const Icon(Icons.notifications_outlined, size: 20),
                       color: Colors.black,
+                      padding: const EdgeInsets.all(8),
+                      constraints: const BoxConstraints(
+                        minWidth: 40,
+                        minHeight: 40,
+                      ),
                     ),
                     if (notificationCount > 0)
                       Positioned(
-                        right: 8,
-                        top: 8,
+                        right: 6,
+                        top: 6,
                         child: Container(
-                          padding: const EdgeInsets.all(4),
+                          padding: const EdgeInsets.all(3),
                           decoration: BoxDecoration(
                             color: Colors.red,
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(8),
                           ),
                           constraints: const BoxConstraints(
-                            minWidth: 16,
-                            minHeight: 16,
+                            minWidth: 14,
+                            minHeight: 14,
                           ),
                           child: Text(
                             notificationCount.toString(),
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 10,
+                              fontSize: 9,
                               fontWeight: FontWeight.bold,
                               fontFamily: 'InriaSans',
                             ),
@@ -102,12 +114,12 @@ class TopBar extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               // Add Button
               Container(
                 decoration: BoxDecoration(
                   color: Theme.of(context).primaryColor,
-                  borderRadius: BorderRadius.circular(25),
+                  borderRadius: BorderRadius.circular(100),
                   boxShadow: [
                     BoxShadow(
                       color: Theme.of(context).primaryColor.withOpacity(0.3),
@@ -118,8 +130,13 @@ class TopBar extends StatelessWidget {
                 ),
                 child: IconButton(
                   onPressed: onAddTap,
-                  icon: const Icon(Icons.add),
+                  icon: const Icon(Icons.add, size: 20),
                   color: Colors.white,
+                  padding: const EdgeInsets.all(8),
+                  constraints: const BoxConstraints(
+                    minWidth: 40,
+                    minHeight: 40,
+                  ),
                 ),
               ),
             ],
@@ -153,4 +170,68 @@ class TopBar extends StatelessWidget {
       child: Icon(Icons.person, color: Colors.grey[600]),
     );
   }
-} 
+}
+
+class _SyncIconButton extends StatefulWidget {
+  final VoidCallback onTap;
+  final bool isSyncing;
+  const _SyncIconButton({required this.onTap, required this.isSyncing});
+
+  @override
+  State<_SyncIconButton> createState() => _SyncIconButtonState();
+}
+
+class _SyncIconButtonState extends State<_SyncIconButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 1),
+    );
+    if (widget.isSyncing) {
+      _controller.repeat();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant _SyncIconButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isSyncing && !_controller.isAnimating) {
+      _controller.repeat();
+    } else if (!widget.isSyncing && _controller.isAnimating) {
+      _controller.stop();
+      _controller.reset();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      onPressed: widget.onTap,
+      icon: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          return Transform.rotate(
+            angle: _controller.value * 6.28319, // 2 * pi
+            child: child,
+          );
+        },
+        child: const Icon(Icons.sync, size: 22, color: Colors.black54),
+      ),
+      splashRadius: 22,
+      padding: const EdgeInsets.all(8),
+      constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+      tooltip: 'Sync',
+    );
+  }
+}

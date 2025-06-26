@@ -4,6 +4,7 @@ import 'package:isar/isar.dart';
 import '../../../shared/document_card.dart';
 import '../../../shared/document_list.dart';
 import '../models/particular_model.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class HomePage extends StatefulWidget {
   final Isar isar;
@@ -43,7 +44,8 @@ class _HomePageState extends State<HomePage> {
             final sevenDaysFromNow = now.add(const Duration(days: 7));
 
             // Count expired documents
-            final expiredDocuments = particulars.where((p) => p.expiryDate.isBefore(now)).length;
+            final expiredDocuments =
+                particulars.where((p) => p.expiryDate.isBefore(now)).length;
 
             // Count documents expiring within 30 days
             final expiringSoon =
@@ -75,10 +77,10 @@ class _HomePageState extends State<HomePage> {
                     particulars.isEmpty
                         ? 'No documents yet'
                         : expiredDocuments > 0
-                            ? '$expiredDocuments documents expired'
-                            : '$expiringInSevenDays require immediate action',
+                        ? '$expiredDocuments documents expired'
+                        : '$expiringInSevenDays require immediate action',
                 'number': '${particulars.length}',
-                'icon': Icons.description_outlined,
+                'iconPath': 'assets/images/total.svg',
               },
               {
                 'title': 'Expiring Soon',
@@ -87,7 +89,7 @@ class _HomePageState extends State<HomePage> {
                         ? 'No documents expiring soon'
                         : '$expiringInSevenDays require immediate action',
                 'number': '$expiringSoon',
-                'icon': Icons.warning_amber_outlined,
+                'iconPath': 'assets/images/expiring.svg',
               },
               {
                 'title': 'Up to Date',
@@ -96,7 +98,7 @@ class _HomePageState extends State<HomePage> {
                         ? 'No up-to-date documents'
                         : 'No action required',
                 'number': '$upToDate',
-                'icon': Icons.check_circle_outline,
+                'iconPath': 'assets/images/uptodate.svg',
               },
             ];
 
@@ -109,23 +111,27 @@ class _HomePageState extends State<HomePage> {
                 children: [
                   const SizedBox(height: 18),
                   SizedBox(
-                    height: 200,
+                    height: 160,
                     child:
                         particulars.isEmpty
                             ? Center(
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(
-                                    Icons.description_outlined,
-                                    size: 48,
-                                    color: Colors.grey[400],
+                                  SvgPicture.asset(
+                                    'assets/images/no-documents.svg',
+                                    width: 48,
+                                    height: 48,
+                                    colorFilter: ColorFilter.mode(
+                                      Colors.grey[400]!,
+                                      BlendMode.srcIn,
+                                    ),
                                   ),
                                   const SizedBox(height: 16),
                                   Text(
                                     'No documents yet',
                                     style: TextStyle(
-                                      fontSize: 18,
+                                      fontSize: 14,
                                       color: Colors.grey[600],
                                     ),
                                   ),
@@ -133,7 +139,7 @@ class _HomePageState extends State<HomePage> {
                                   Text(
                                     'Click the add button to add documents',
                                     style: TextStyle(
-                                      fontSize: 14,
+                                      fontSize: 11,
                                       color: Colors.grey[500],
                                     ),
                                   ),
@@ -142,7 +148,7 @@ class _HomePageState extends State<HomePage> {
                             )
                             : FlutterCarousel(
                               options: CarouselOptions(
-                                height: 200,
+                                height: 160,
                                 viewportFraction: 1.0,
                                 enableInfiniteScroll: false,
                                 autoPlay: true,
@@ -159,7 +165,7 @@ class _HomePageState extends State<HomePage> {
                                         title: stat['title'] as String,
                                         subtitle: stat['subtitle'] as String,
                                         number: stat['number'] as String,
-                                        icon: stat['icon'] as IconData,
+                                        iconPath: stat['iconPath'] as String,
                                         onTap: () {
                                           // Handle card tap
                                         },

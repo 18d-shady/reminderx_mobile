@@ -34,7 +34,7 @@ dependencies:
       name: isar
       url: https://pub.isar-community.dev/
     version: ^3.0.0
-
+  flutter_svg: ^2.0.9
   isar_flutter_libs:
     hosted:
       name: isar_flutter_libs
@@ -49,6 +49,9 @@ dependencies:
   path: ^1.9.1
   open_filex: ^4.3.4
   image_picker: ^1.0.7
+  intl_phone_field: ^3.2.0
+  firebase_core: ^3.14.0
+  firebase_messaging: ^15.2.7
 
 dev_dependencies:
   flutter_test:
@@ -67,6 +70,11 @@ flutter:
     - assets/fonts/
     - assets/images/login_background.png
     - assets/images/signup_background.png
+    - assets/images/naikas_icon.png
+    - assets/images/no-documents.svg
+    - assets/images/total.svg
+    - assets/images/expiring.svg
+    - assets/images/uptodate.svg
   fonts:
     - family: InknutAntiqua
       fonts:

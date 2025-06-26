@@ -19,6 +19,8 @@ class DocumentSearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? Colors.grey[850] : Colors.grey[200];
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       child: GestureDetector(
@@ -26,15 +28,8 @@ class DocumentSearchBar extends StatelessWidget {
         child: Container(
           height: 48,
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            color: bgColor,
+            borderRadius: BorderRadius.circular(32),
           ),
           child: TextField(
             controller: controller,

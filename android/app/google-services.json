@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "373267196152",
+    "project_id": "naikas-4b46c",
+    "storage_bucket": "naikas-4b46c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:373267196152:android:638ded0452a26c199f330d",
+        "android_client_info": {
+          "package_name": "com.reminderx.naikas"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB4RlgWMNzc_rFv5Lp5pxooZ_8hEKQU2qE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

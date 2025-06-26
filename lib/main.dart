@@ -4,8 +4,12 @@ import 'features/auth/screens/login_screen.dart';
 import 'features/documents/screens/main_screen.dart';
 import 'features/auth/services/auth_service.dart'; // Simulated auth check
 import 'features/auth/screens/signup_screen.dart';
+import 'package:firebase_core/firebase_core.dart';
+//import 'package:firebase_messaging/firebase_messaging.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   runApp(const MyApp());
 }
 
@@ -21,6 +25,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: AuthService.navigatorKey,
       title: 'ReminderX',
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
@@ -28,7 +33,7 @@ class MyApp extends StatelessWidget {
       routes: {
         '/login': (context) => const LoginScreen(),
         '/signup': (context) => const SignupScreen(),
-        // Add other named screens like '/home', '/settings' as you create them
+        '/home': (context) => const MainScreen(),
       },
       home: FutureBuilder<bool>(
         future: checkLoggedIn(),

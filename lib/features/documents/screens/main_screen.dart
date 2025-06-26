@@ -130,6 +130,18 @@ class _MainScreenState extends State<MainScreen> {
                           ),
                         );
                       },
+                      onSyncTap: () async {
+                        if (_isSyncing) return;
+                        setState(() => _isSyncing = true);
+                        try {
+                          await SyncService().fetchAndStoreAll();
+                        } catch (e) {
+                          print('Sync error: $e');
+                        } finally {
+                          if (mounted) setState(() => _isSyncing = false);
+                        }
+                      },
+                      isSyncing: _isSyncing,
                     ),
                     // Search Bar (show on all pages except settings)
                     if (_currentIndex != 3) // Not settings page

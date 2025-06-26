@@ -7,12 +7,12 @@ import '../services/document_api_service.dart';
 import 'package:intl/intl.dart';
 import '../services/sync_service.dart';
 import '../models/profile_model.dart';
+import '../../../core/theme.dart';
 
 class CreateDocumentScreen extends StatefulWidget {
   final Isar isar;
 
   const CreateDocumentScreen({super.key, required this.isar});
-
   @override
   State<CreateDocumentScreen> createState() => _CreateDocumentScreenState();
 }
@@ -39,28 +39,31 @@ class _CreateDocumentScreenState extends State<CreateDocumentScreen> {
   }
 
   void _loadProfile() {
-    final subscription = widget.isar.profiles.where().watch(fireImmediately: true).listen((profiles) {
-      if (profiles.isNotEmpty && mounted) {
-        setState(() {
-          _profile = profiles.first;
-          // Initialize reminder methods based on profile settings
-          _selectedReminderMethods = [];
-          // Only add methods that are enabled in profile
-          if (_profile?.emailNotifications ?? false) {
-            _selectedReminderMethods.add('email');
-          }
-          if (_profile?.smsNotifications ?? false) {
-            _selectedReminderMethods.add('sms');
-          }
-          if (_profile?.pushNotifications ?? false) {
-            _selectedReminderMethods.add('push');
-          }
-          if (_profile?.whatsappNotifications ?? false) {
-            _selectedReminderMethods.add('whatsapp');
+    final subscription = widget.isar.profiles
+        .where()
+        .watch(fireImmediately: true)
+        .listen((profiles) {
+          if (profiles.isNotEmpty && mounted) {
+            setState(() {
+              _profile = profiles.first;
+              // Initialize reminder methods based on profile settings
+              _selectedReminderMethods = [];
+              // Only add methods that are enabled in profile
+              if (_profile?.emailNotifications ?? false) {
+                _selectedReminderMethods.add('email');
+              }
+              if (_profile?.smsNotifications ?? false) {
+                _selectedReminderMethods.add('sms');
+              }
+              if (_profile?.pushNotifications ?? false) {
+                _selectedReminderMethods.add('push');
+              }
+              if (_profile?.whatsappNotifications ?? false) {
+                _selectedReminderMethods.add('whatsapp');
+              }
+            });
           }
         });
-      }
-    });
 
     // Clean up subscription when widget is disposed
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -80,7 +83,11 @@ class _CreateDocumentScreenState extends State<CreateDocumentScreen> {
   Future<void> _pickFile() async {
     try {
       final result = await FilePicker.platform.pickFiles(
-        type: FileType.any,
+        type: FileType.custom,
+        allowedExtensions: [
+          'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt',
+          'jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp'
+        ],
         allowMultiple: false,
       );
 
@@ -97,21 +104,47 @@ class _CreateDocumentScreenState extends State<CreateDocumentScreen> {
   }
 
   Future<void> _selectDate(BuildContext context, bool isExpiryDate) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 3650)),
-    );
+    if (isExpiryDate) {
+      final DateTime? picked = await showDatePicker(
+        context: context,
+        initialDate: DateTime.now(),
+        firstDate: DateTime.now(),
+        lastDate: DateTime.now().add(const Duration(days: 3650)),
+      );
 
-    if (picked != null) {
-      setState(() {
-        if (isExpiryDate) {
+      if (picked != null) {
+        setState(() {
           _expiryDate = picked;
-        } else {
-          _scheduleDate = picked;
+        });
+      }
+    } else {
+      // For scheduled date, show date picker first
+      final DateTime? pickedDate = await showDatePicker(
+        context: context,
+        initialDate: DateTime.now(),
+        firstDate: DateTime.now(),
+        lastDate: DateTime.now().add(const Duration(days: 3650)),
+      );
+
+      if (pickedDate != null) {
+        // Then show time picker
+        final TimeOfDay? pickedTime = await showTimePicker(
+          context: context,
+          initialTime: TimeOfDay.now(),
+        );
+
+        if (pickedTime != null) {
+          setState(() {
+            _scheduleDate = DateTime(
+              pickedDate.year,
+              pickedDate.month,
+              pickedDate.day,
+              pickedTime.hour,
+              pickedTime.minute,
+            );
+          });
         }
-      });
+      }
     }
   }
 
@@ -120,6 +153,31 @@ class _CreateDocumentScreenState extends State<CreateDocumentScreen> {
     if (_expiryDate == null || _scheduleDate == null) {
       setState(() {
         _error = 'Please select both expiry and schedule dates';
+      });
+      return;
+    }
+    final now = DateTime.now();
+    if (_expiryDate!.isBefore(DateTime(now.year, now.month, now.day))) {
+      setState(() {
+        _error = 'Expiry date cannot be before today.';
+      });
+      return;
+    }
+    if (_scheduleDate!.isBefore(now)) {
+      setState(() {
+        _error = 'Reminder date must be on or after now.';
+      });
+      return;
+    }
+    if (_scheduleDate!.isAfter(_expiryDate!)) {
+      setState(() {
+        _error = 'Reminder date cannot be after expiry date.';
+      });
+      return;
+    }
+    if (_selectedFile != null && _selectedFile!.size > 20 * 1024 * 1024) {
+      setState(() {
+        _error = 'File size must be less than 20MB.';
       });
       return;
     }
@@ -210,8 +268,9 @@ class _CreateDocumentScreenState extends State<CreateDocumentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      appBar: AppBar(title: const Text('Create New Document')),
+      appBar: AppBar(title: const Text('Create Document')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -219,71 +278,33 @@ class _CreateDocumentScreenState extends State<CreateDocumentScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Document Name
-              const Text(
-                'Document Name*',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(height: 8),
+              // Title Field
               TextFormField(
                 controller: _titleController,
                 decoration: InputDecoration(
-                  hintText: 'Enter Document Name',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade200),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Theme.of(context).primaryColor),
-                  ),
+                  labelText: 'Title',
+                  hintText: 'Enter document title',
+                  border: const OutlineInputBorder(),
                   filled: true,
-                  fillColor: Colors.grey.shade50,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 16,
-                  ),
+                  fillColor: isDark ? AppColors.darkSurface : Colors.white,
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Please enter a document name';
+                    return 'Please enter a title';
                   }
                   return null;
                 },
               ),
               const SizedBox(height: 16),
 
-              // Document Type
-              const Text(
-                'Document Type*',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(height: 8),
+              // Category Dropdown
               DropdownButtonFormField<String>(
                 value: _category,
                 decoration: InputDecoration(
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade200),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Theme.of(context).primaryColor),
-                  ),
+                  labelText: 'Category',
+                  border: const OutlineInputBorder(),
                   filled: true,
-                  fillColor: Colors.grey.shade50,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 16,
-                  ),
+                  fillColor: isDark ? AppColors.darkSurface : Colors.white,
                 ),
                 items: const [
                   DropdownMenuItem(value: 'vehicle', child: Text('Vehicle')),
@@ -299,341 +320,298 @@ class _CreateDocumentScreenState extends State<CreateDocumentScreen> {
                   DropdownMenuItem(value: 'other', child: Text('Other')),
                 ],
                 onChanged: (value) {
-                  if (value != null) {
-                    setState(() {
-                      _category = value;
-                    });
-                  }
+                  setState(() {
+                    _category = value!;
+                  });
                 },
               ),
               const SizedBox(height: 16),
 
-              // Expiry Date
-              const Text(
-                'Expiry Date*',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(height: 8),
+              // Expiry Date Field
               InkWell(
                 onTap: () => _selectDate(context, true),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 16,
+                child: InputDecorator(
+                  decoration: InputDecoration(
+                    labelText: 'Expiry Date',
+                    border: const OutlineInputBorder(),
+                    filled: true,
+                    fillColor: isDark ? AppColors.darkSurface : Colors.white,
                   ),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade200),
-                    borderRadius: BorderRadius.circular(12),
-                    color: Colors.grey.shade50,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        _expiryDate == null
-                            ? 'Select Expiry Date'
-                            : DateFormat('yyyy-MM-dd').format(_expiryDate!),
-                        style: TextStyle(
-                          color: _expiryDate == null ? Colors.grey : Colors.black87,
-                        ),
-                      ),
-                      Icon(Icons.calendar_today, color: Colors.grey.shade600),
-                    ],
+                  child: Text(
+                    _expiryDate == null
+                        ? 'Select expiry date'
+                        : DateFormat('MMM dd, yyyy').format(_expiryDate!),
+                    style: TextStyle(
+                      color:
+                          _expiryDate == null
+                              ? AppTheme.getSecondaryTextColor(isDark)
+                              : AppTheme.getTextColor(isDark),
+                    ),
                   ),
                 ),
               ),
               const SizedBox(height: 16),
 
-              // Notes
-              const Text(
-                'Notes',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(height: 8),
+              // Notes Field
               TextFormField(
                 controller: _notesController,
                 maxLines: 3,
                 decoration: InputDecoration(
-                  hintText: 'Notes',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade200),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Theme.of(context).primaryColor),
-                  ),
+                  labelText: 'Notes',
+                  hintText: 'Enter any additional notes',
+                  border: const OutlineInputBorder(),
                   filled: true,
-                  fillColor: Colors.grey.shade50,
-                  contentPadding: const EdgeInsets.all(16),
+                  fillColor: isDark ? AppColors.darkSurface : Colors.white,
                 ),
               ),
               const SizedBox(height: 16),
 
-              // Upload Document
-              const Text(
-                'Upload Document',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(height: 8),
-              InkWell(
-                onTap: _pickFile,
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade200),
-                    borderRadius: BorderRadius.circular(12),
-                    color: Colors.grey.shade50,
+              // File Upload Section
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.darkSurface : Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color:
+                        isDark ? AppColors.darkDivider : Colors.grey.shade300,
                   ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.upload_file, color: Colors.grey.shade600),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          _selectedFile?.name ?? 'Choose a file',
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: _selectedFile == null ? Colors.grey : Colors.black87,
-                          ),
-                        ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Document File',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.getTextColor(isDark),
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 8),
+                    if (_selectedFile != null)
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color:
+                              isDark
+                                  ? AppColors.darkCard
+                                  : Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.insert_drive_file,
+                              color: AppTheme.getTextColor(isDark),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                _selectedFile!.name,
+                                style: TextStyle(
+                                  color: AppTheme.getTextColor(isDark),
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close),
+                              onPressed: () {
+                                setState(() {
+                                  _selectedFile = null;
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      ElevatedButton.icon(
+                        onPressed: _pickFile,
+                        icon: const Icon(Icons.upload_file),
+                        label: const Text('Upload Document (Allowed: PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, TXT, JPG, JPEG, PNG, GIF, BMP, SVG, WEBP. Max 20MB)'),
+                      ),
+                  ],
                 ),
               ),
               const SizedBox(height: 24),
 
               // Reminder Settings Section
-              const Text(
-                'Reminder Settings',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-
-              // Reminder Date
-              const Text(
-                'Reminder Date*',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(height: 8),
-              InkWell(
-                onTap: () => _selectDate(context, false),
-                child: InputDecorator(
-                  decoration: InputDecoration(
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 16,
-                    ),
-                  ),
-                  child: Text(
-                    _scheduleDate == null
-                        ? 'Select Reminder Date'
-                        : DateFormat('yyyy-MM-dd').format(_scheduleDate!),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.darkSurface : Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color:
+                        isDark ? AppColors.darkDivider : Colors.grey.shade300,
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Reminder Settings',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.getTextColor(isDark),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
 
-              // Notification Preference
-              const Text(
-                'Notification Preference*',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(height: 8),
-              Column(
-                children: [
-                  if (_profile?.emailNotifications ?? false)
-                    CheckboxListTile(
-                      title: const Text('Email'),
-                      value: _selectedReminderMethods.contains('email'),
-                      activeColor: Theme.of(context).primaryColor,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                    // Schedule Date
+                    InkWell(
+                      onTap: () => _selectDate(context, false),
+                      child: InputDecorator(
+                        decoration: InputDecoration(
+                          labelText: 'Schedule Date & Time',
+                          border: const OutlineInputBorder(),
+                          filled: true,
+                          fillColor: isDark ? AppColors.darkSurface : Colors.white,
+                        ),
+                        child: Text(
+                          _scheduleDate == null
+                              ? 'Select schedule date and time'
+                              : DateFormat('MMM dd, yyyy h:mm a').format(_scheduleDate!),
+                          style: TextStyle(
+                            color: _scheduleDate == null
+                                ? AppTheme.getSecondaryTextColor(isDark)
+                                : AppTheme.getTextColor(isDark),
+                          ),
+                        ),
                       ),
-                      tileColor: Colors.grey.shade50,
-                      onChanged: (bool? value) {
-                        setState(() {
-                          if (value == true) {
-                            _selectedReminderMethods.add('email');
-                          } else {
-                            _selectedReminderMethods.remove('email');
-                          }
-                        });
-                      },
                     ),
-                  if (_profile?.smsNotifications ?? false)
-                    CheckboxListTile(
-                      title: const Text('SMS'),
-                      value: _selectedReminderMethods.contains('sms'),
-                      activeColor: Theme.of(context).primaryColor,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      tileColor: Colors.grey.shade50,
-                      onChanged: (bool? value) {
-                        setState(() {
-                          if (value == true) {
-                            _selectedReminderMethods.add('sms');
-                          } else {
-                            _selectedReminderMethods.remove('sms');
-                          }
-                        });
-                      },
-                    ),
-                  if (_profile?.pushNotifications ?? false)
-                    CheckboxListTile(
-                      title: const Text('Push Notification'),
-                      value: _selectedReminderMethods.contains('push'),
-                      activeColor: Theme.of(context).primaryColor,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      tileColor: Colors.grey.shade50,
-                      onChanged: (bool? value) {
-                        setState(() {
-                          if (value == true) {
-                            _selectedReminderMethods.add('push');
-                          } else {
-                            _selectedReminderMethods.remove('push');
-                          }
-                        });
-                      },
-                    ),
-                  if (_profile?.whatsappNotifications ?? false)
-                    CheckboxListTile(
-                      title: const Text('WhatsApp'),
-                      value: _selectedReminderMethods.contains('whatsapp'),
-                      activeColor: Theme.of(context).primaryColor,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      tileColor: Colors.grey.shade50,
-                      onChanged: (bool? value) {
-                        setState(() {
-                          if (value == true) {
-                            _selectedReminderMethods.add('whatsapp');
-                          } else {
-                            _selectedReminderMethods.remove('whatsapp');
-                          }
-                        });
-                      },
-                    ),
-                ],
-              ),
-              const SizedBox(height: 16),
+                    const SizedBox(height: 16),
 
-              // Recurring Reminder
-              const Text(
-                'Recurring Reminder*',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
-                value: _recurrence,
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade200),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Theme.of(context).primaryColor),
-                  ),
-                  filled: true,
-                  fillColor: Colors.grey.shade50,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 16,
-                  ),
+                    // Reminder Methods
+                    Text(
+                      'Reminder Methods',
+                      style: TextStyle(
+                        color: AppTheme.getTextColor(isDark),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      children: [
+                        FilterChip(
+                          label: const Text('Email'),
+                          selected: _selectedReminderMethods.contains('email'),
+                          onSelected: (_profile?.emailNotifications ?? false) ? (selected) {
+                            setState(() {
+                              if (selected) {
+                                _selectedReminderMethods.add('email');
+                              } else {
+                                _selectedReminderMethods.remove('email');
+                              }
+                            });
+                          } : null,
+                        ),
+                        FilterChip(
+                          label: const Text('SMS'),
+                          selected: _selectedReminderMethods.contains('sms'),
+                          onSelected: (_profile?.smsNotifications ?? false) ? (selected) {
+                            setState(() {
+                              if (selected) {
+                                _selectedReminderMethods.add('sms');
+                              } else {
+                                _selectedReminderMethods.remove('sms');
+                              }
+                            });
+                          } : null,
+                        ),
+                        FilterChip(
+                          label: const Text('Push'),
+                          selected: _selectedReminderMethods.contains('push'),
+                          onSelected: (_profile?.pushNotifications ?? false) ? (selected) {
+                            setState(() {
+                              if (selected) {
+                                _selectedReminderMethods.add('push');
+                              } else {
+                                _selectedReminderMethods.remove('push');
+                              }
+                            });
+                          } : null,
+                        ),
+                        FilterChip(
+                          label: const Text('WhatsApp'),
+                          selected: _selectedReminderMethods.contains('whatsapp'),
+                          onSelected: (_profile?.whatsappNotifications ?? false) ? (selected) {
+                            setState(() {
+                              if (selected) {
+                                _selectedReminderMethods.add('whatsapp');
+                              } else {
+                                _selectedReminderMethods.remove('whatsapp');
+                              }
+                            });
+                          } : null,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Recurrence
+                    DropdownButtonFormField<String>(
+                      value: _recurrence,
+                      decoration: InputDecoration(
+                        labelText: 'Recurrence',
+                        border: const OutlineInputBorder(),
+                        filled: true,
+                        fillColor: isDark ? AppColors.darkSurface : Colors.white,
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 'none', child: Text('None')),
+                        DropdownMenuItem(value: 'daily', child: Text('Daily')),
+                        DropdownMenuItem(value: 'every_2_days', child: Text('Every 2 Days')),
+                      ],
+                      onChanged: (value) {
+                        setState(() {
+                          _recurrence = value!;
+                          if (value == 'none') {
+                            _startDaysBefore = 3; // Reset to default
+                          }
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Start Days Before
+                    TextFormField(
+                      initialValue: _startDaysBefore.toString(),
+                      enabled: _recurrence != 'none',
+                      decoration: InputDecoration(
+                        labelText: 'Start Days Before Expiry',
+                        border: const OutlineInputBorder(),
+                        filled: true,
+                        fillColor: isDark ? AppColors.darkSurface : Colors.white,
+                      ),
+                      keyboardType: TextInputType.number,
+                      onChanged: (value) {
+                        if (_recurrence != 'none') {
+                          final days = int.tryParse(value) ?? 3;
+                          setState(() {
+                            _startDaysBefore = days.clamp(1, 7);
+                          });
+                        }
+                      },
+                    ),
+                  ],
                 ),
-                items: const [
-                  DropdownMenuItem(value: 'none', child: Text('None')),
-                  DropdownMenuItem(value: 'daily', child: Text('Daily')),
-                  DropdownMenuItem(value: 'every_2_days', child: Text('Every 2 Days')),
-                ],
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() {
-                      _recurrence = value;
-                    });
-                  }
-                },
               ),
-              const SizedBox(height: 16),
-
-              // Start Days Before
-              const Text(
-                'Start Days Before Expiry Date',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(height: 8),
-              TextFormField(
-                initialValue: _startDaysBefore.toString(),
-                keyboardType: TextInputType.number,
-                enabled: _recurrence != 'none',
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade200),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Theme.of(context).primaryColor),
-                  ),
-                  filled: true,
-                  fillColor: Colors.grey.shade50,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 16,
-                  ),
-                  hintText: _recurrence == 'none' ? 'Disabled for non-recurring reminders' : 'Enter days (1-7)',
-                ),
-                validator: (value) {
-                  if (_recurrence != 'none') {
-                    final days = int.tryParse(value ?? '');
-                    if (days == null || days < 1 || days > 7) {
-                      return 'Please enter a number between 1 and 7';
-                    }
-                  }
-                  return null;
-                },
-                onChanged: (value) {
-                  if (_recurrence != 'none') {
-                    final days = int.tryParse(value);
-                    if (days != null && days >= 1 && days <= 7) {
-                      setState(() {
-                        _startDaysBefore = days;
-                      });
-                    }
-                  }
-                },
-              ),
-              const SizedBox(height: 24),
 
               if (_error != null)
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.only(top: 16),
                   child: Text(
                     _error!,
                     style: const TextStyle(color: Colors.red),
                   ),
                 ),
+
+              const SizedBox(height: 24),
 
               // Submit Button
               SizedBox(
@@ -642,24 +620,20 @@ class _CreateDocumentScreenState extends State<CreateDocumentScreen> {
                   onPressed: _isSubmitting ? null : _submitForm,
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 0,
-                    backgroundColor: Theme.of(context).primaryColor,
                   ),
-                  child: _isSubmitting
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white,
+                  child:
+                      _isSubmitting
+                          ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
                             ),
-                          ),
-                        )
-                      : const Text('Create Document'),
+                          )
+                          : const Text('Create Document'),
                 ),
               ),
             ],

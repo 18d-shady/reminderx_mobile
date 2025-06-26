@@ -3,6 +3,7 @@ import 'package:reminderx_mobile/features/auth/services/auth_service.dart';
 import 'package:reminderx_mobile/features/documents/screens/main_screen.dart';
 import 'package:reminderx_mobile/features/auth/exceptions/auth_exceptions.dart';
 import 'package:reminderx_mobile/features/documents/services/sync_service.dart';
+import 'package:reminderx_mobile/features/auth/screens/reset_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -74,6 +75,47 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  void _showForgotPasswordDialog() async {
+    final enteredEmail = usernameController.text.trim();
+    if (enteredEmail.isEmpty) {
+      setState(() {
+        errorMessage =
+            'Please enter your email in the field above to reset your password.';
+      });
+      return;
+    }
+    // If email is already entered, use it directly
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
+    try {
+      final success = await AuthService().requestPasswordReset(enteredEmail);
+      if (success && mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ResetPasswordScreen(email: enteredEmail),
+          ),
+        );
+      }
+    } on NetworkException {
+      setState(() {
+        errorMessage = 'Network error. Please try again.';
+      });
+    } on AuthException catch (e) {
+      setState(() {
+        errorMessage = e.message;
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final primaryColor = const Color(0xFF8EB0D6);
@@ -97,29 +139,36 @@ class _LoginScreenState extends State<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Logo
-                  RichText(
-                    text: TextSpan(
-                      children: [
-                        const TextSpan(
-                          text: "REMINDER",
-                          style: TextStyle(
-                            fontSize: 20,
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: "InknutAntiqua",
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        margin: const EdgeInsets.only(right: 8),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          color: Colors.white,
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.asset(
+                            'assets/images/naikas_icon.png',
+                            fit: BoxFit.cover,
                           ),
                         ),
-                        TextSpan(
-                          text: "X",
-                          style: TextStyle(
-                            fontSize: 26,
-                            color: primaryColor,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: "InknutAntiqua",
-                          ),
+                      ),
+                      const Text(
+                        'NAIKAS',
+                        style: TextStyle(
+                          fontSize: 22,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: "InknutAntiqua",
+                          letterSpacing: 1.5,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 60),
                   // Welcome Message
@@ -187,7 +236,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
-                      onPressed: () {},
+                      onPressed: _showForgotPasswordDialog,
                       child: const Text(
                         'Forgot password?',
                         style: TextStyle(
