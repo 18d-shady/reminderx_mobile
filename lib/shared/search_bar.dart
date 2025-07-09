@@ -39,15 +39,16 @@ class DocumentSearchBar extends StatelessWidget {
               hintStyle: TextStyle(
                 color: Colors.grey[400],
                 fontFamily: 'InriaSans',
+                fontSize: 13,
               ),
               prefixIcon: Icon(Icons.search, color: Colors.grey[400]),
               border: InputBorder.none,
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 16,
-                vertical: 14,
+                vertical: 10,
               ),
             ),
-            style: const TextStyle(fontFamily: 'InriaSans'),
+            style: const TextStyle(fontFamily: 'InriaSans', fontSize: 13),
           ),
         ),
       ),
@@ -90,6 +91,34 @@ class DocumentSearchDelegate extends SearchDelegate<Particular?> {
   @override
   Widget buildSuggestions(BuildContext context) {
     return _buildSearchResults();
+  }
+
+  @override
+  ThemeData appBarTheme(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    return theme.copyWith(
+      appBarTheme: theme.appBarTheme.copyWith(
+        titleTextStyle: TextStyle(
+          fontFamily: 'InriaSans',
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          color: theme.brightness == Brightness.dark ? Colors.white : Colors.black,
+        ),
+        backgroundColor: theme.brightness == Brightness.dark ? Colors.black : Colors.white,
+        iconTheme: IconThemeData(color: theme.brightness == Brightness.dark ? Colors.white : Colors.black),
+        centerTitle: false,
+        elevation: 0,
+      ),
+      inputDecorationTheme: theme.inputDecorationTheme.copyWith(
+        hintStyle: const TextStyle(fontSize: 13, fontFamily: 'InriaSans'),
+      ),
+      textTheme: theme.textTheme.copyWith(
+        titleMedium: const TextStyle(fontSize: 13, fontFamily: 'InriaSans'),
+        bodyLarge: const TextStyle(fontSize: 13, fontFamily: 'InriaSans'),
+        bodyMedium: const TextStyle(fontSize: 13, fontFamily: 'InriaSans'),
+        bodySmall: const TextStyle(fontSize: 13, fontFamily: 'InriaSans'),
+      ),
+    );
   }
 
   Widget _buildSearchResults() {

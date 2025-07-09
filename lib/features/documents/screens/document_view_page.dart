@@ -11,8 +11,9 @@ import 'edit_document.dart';
 import '../services/document_api_service.dart';
 import '../services/sync_service.dart';
 import '../../../core/theme.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-class DocumentViewPage extends StatelessWidget {
+class DocumentViewPage extends StatefulWidget {
   final Isar isar;
   final Particular particular;
 
@@ -22,8 +23,101 @@ class DocumentViewPage extends StatelessWidget {
     required this.particular,
   });
 
+  @override
+  State<DocumentViewPage> createState() => _DocumentViewPageState();
+}
+
+class _DocumentViewPageState extends State<DocumentViewPage> {
+  bool showRenewModal = false;
+
+  bool get isExpiringSoon {
+    final expiry = widget.particular.expiryDate;
+    final daysLeft = expiry.difference(DateTime.now()).inDays;
+    return daysLeft < 30;
+  }
+
+  List<Map<String, String>> getRenewalLinks(String category) {
+    switch (category.toLowerCase()) {
+      case 'driver':
+        return [
+          {
+            'label': "Renew Driver's License (Nigerian Government)",
+            'url': 'https://www.nigeriadriverslicence.org/dlApplication/renew',
+          },
+          {
+            'label': "FRSC Driver's License Portal",
+            'url': 'https://www.nigeriadriverslicence.org/',
+          },
+        ];
+      case 'vehicle':
+        return [
+          {
+            'label': "Renew Vehicle License (Lagos State)",
+            'url': 'https://www.lsmvaapvs.org/',
+          },
+          {
+            'label': "Renew Vehicle License (Nigerian Government)",
+            'url': 'https://www.nigeriavehiclelicence.com/',
+          },
+        ];
+      case 'international passport':
+        return [
+          {
+            'label': "Renew International Passport",
+            'url': 'https://portal.immigration.gov.ng/',
+          },
+        ];
+      default:
+        return [
+          {
+            'label': "General Renewal Portal",
+            'url': 'https://www.nigeria.gov.ng/',
+          },
+        ];
+    }
+  }
+
+  void _showRenewModal() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        final links = getRenewalLinks(widget.particular.category);
+        return AlertDialog(
+          title: Text('Renew ${widget.particular.title}'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Choose a renewal option:'),
+              ...links.map(
+                (link) => ListTile(
+                  title: Text(link['label']!),
+                  onTap: () async {
+                    final url = link['url']!;
+                    if (await canLaunchUrl(Uri.parse(url))) {
+                      await launchUrl(
+                        Uri.parse(url),
+                        mode: LaunchMode.externalApplication,
+                      );
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _openDocument(BuildContext context) async {
-    if (particular.documentPath == null) {
+    if (widget.particular.documentPath == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('No document file available'),
@@ -33,7 +127,7 @@ class DocumentViewPage extends StatelessWidget {
       return;
     }
 
-    final file = File(particular.documentPath!);
+    final file = File(widget.particular.documentPath!);
     if (!await file.exists()) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -91,20 +185,20 @@ class DocumentViewPage extends StatelessWidget {
   }
 
   String _getFileExtension() {
-    if (particular.documentPath == null) return '';
-    return path.extension(particular.documentPath!).toLowerCase();
+    if (widget.particular.documentPath == null) return '';
+    return path.extension(widget.particular.documentPath!).toLowerCase();
   }
 
   Widget _buildDocumentPreview() {
-    if (particular.documentPath == null) {
+    if (widget.particular.documentPath == null) {
       return _buildDocumentIcon(null);
     }
 
     final extension = _getFileExtension();
-    final file = File(particular.documentPath!);
+    final file = File(widget.particular.documentPath!);
 
     if (!file.existsSync()) {
-      return _buildDocumentIcon(particular.documentPath);
+      return _buildDocumentIcon(widget.particular.documentPath);
     }
 
     switch (extension) {
@@ -113,11 +207,11 @@ class DocumentViewPage extends StatelessWidget {
           future: _buildPdfPreview(file),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return _buildDocumentIcon(particular.documentPath);
+              return _buildDocumentIcon(widget.particular.documentPath);
             }
             if (snapshot.hasError) {
               print('Error rendering PDF preview: ${snapshot.error}');
-              return _buildDocumentIcon(particular.documentPath);
+              return _buildDocumentIcon(widget.particular.documentPath);
             }
             return snapshot.data!;
           },
@@ -134,12 +228,12 @@ class DocumentViewPage extends StatelessWidget {
             fit: BoxFit.cover,
             errorBuilder: (context, error, stackTrace) {
               print('Error loading image: $error');
-              return _buildDocumentIcon(particular.documentPath);
+              return _buildDocumentIcon(widget.particular.documentPath);
             },
           ),
         );
       default:
-        return _buildDocumentIcon(particular.documentPath);
+        return _buildDocumentIcon(widget.particular.documentPath);
     }
   }
 
@@ -182,12 +276,12 @@ class DocumentViewPage extends StatelessWidget {
   Future<Widget> _buildPdfPreview(File file) async {
     try {
       if (!await file.exists()) {
-        return _buildDocumentIcon(particular.documentPath);
+        return _buildDocumentIcon(widget.particular.documentPath);
       }
 
       final document = await PdfDocument.openFile(file.path);
       if (document.pages.isEmpty) {
-        return _buildDocumentIcon(particular.documentPath);
+        return _buildDocumentIcon(widget.particular.documentPath);
       }
 
       return ClipRRect(
@@ -200,7 +294,7 @@ class DocumentViewPage extends StatelessWidget {
       );
     } catch (e) {
       print('Error rendering PDF preview: $e');
-      return _buildDocumentIcon(particular.documentPath);
+      return _buildDocumentIcon(widget.particular.documentPath);
     }
   }
 
@@ -240,7 +334,7 @@ class DocumentViewPage extends StatelessWidget {
 
       // Delete document from server
       final response = await DocumentApiService.deleteDocument(
-        particular.docId,
+        widget.particular.docId,
       );
 
       if (response.statusCode != 204) {
@@ -271,13 +365,28 @@ class DocumentViewPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final now = DateTime.now();
     final thirtyDaysFromNow = now.add(const Duration(days: 30));
-    final isExpiringSoon = particular.expiryDate.isBefore(thirtyDaysFromNow);
+    final isExpiringSoon = widget.particular.expiryDate.isBefore(
+      thirtyDaysFromNow,
+    );
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Document Details')),
+      appBar: AppBar(
+        backgroundColor: isDark ? Colors.black : Colors.white,
+        iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
+        elevation: 0,
+        title: Text(
+          'Document Details',
+          style: TextStyle(
+            fontSize: 16,
+            color: isDark ? Colors.white : Colors.black,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        centerTitle: false,
+      ),
       body: FutureBuilder<List<Reminder>>(
-        future: particular.reminders.filter().findAll(),
+        future: widget.particular.reminders.filter().findAll(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -291,7 +400,7 @@ class DocumentViewPage extends StatelessWidget {
 
           final reminders = snapshot.data ?? [];
           print(
-            'Loaded ${reminders.length} reminders for document ${particular.title}',
+            'Loaded ${reminders.length} reminders for document ${widget.particular.title}',
           );
           for (final reminder in reminders) {
             print(
@@ -329,7 +438,7 @@ class DocumentViewPage extends StatelessWidget {
                       Row(
                         children: [
                           // Document Preview
-                          particular.documentPath != null
+                          widget.particular.documentPath != null
                               ? GestureDetector(
                                 onTap: () => _openDocument(context),
                                 child: _buildDocumentPreview(),
@@ -339,7 +448,7 @@ class DocumentViewPage extends StatelessWidget {
                           // Document Title
                           Expanded(
                             child: Text(
-                              particular.title,
+                              widget.particular.title,
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
@@ -379,7 +488,7 @@ class DocumentViewPage extends StatelessWidget {
                                   Text(
                                     DateFormat(
                                       'MMM dd, yyyy',
-                                    ).format(particular.expiryDate),
+                                    ).format(widget.particular.expiryDate),
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.bold,
@@ -410,12 +519,38 @@ class DocumentViewPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
                 // Document Details Section
-                Text(
-                  'Document Details',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.getTextColor(isDark),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 8.0,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Document Details',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      if (isExpiringSoon)
+                        ElevatedButton(
+                          onPressed: _showRenewModal,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text('Renew'),
+                        ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -441,7 +576,7 @@ class DocumentViewPage extends StatelessWidget {
                       _buildDetailRow(
                         context,
                         'Document Name',
-                        particular.title,
+                        widget.particular.title,
                       ),
                       const Divider(),
                       _buildDetailRow(
@@ -449,13 +584,21 @@ class DocumentViewPage extends StatelessWidget {
                         'Expiry Date',
                         DateFormat(
                           'MMM dd, yyyy',
-                        ).format(particular.expiryDate),
+                        ).format(widget.particular.expiryDate),
                       ),
                       const Divider(),
-                      _buildDetailRow(context, 'Category', particular.category),
-                      if (particular.notes?.isNotEmpty ?? false) ...[
+                      _buildDetailRow(
+                        context,
+                        'Category',
+                        widget.particular.category,
+                      ),
+                      if (widget.particular.notes?.isNotEmpty ?? false) ...[
                         const Divider(),
-                        _buildDetailRow(context, 'Notes', particular.notes!),
+                        _buildDetailRow(
+                          context,
+                          'Notes',
+                          widget.particular.notes!,
+                        ),
                       ],
                     ],
                   ),
@@ -579,8 +722,8 @@ class DocumentViewPage extends StatelessWidget {
                         MaterialPageRoute(
                           builder:
                               (context) => EditDocumentScreen(
-                                isar: isar,
-                                particular: particular,
+                                isar: widget.isar,
+                                particular: widget.particular,
                               ),
                         ),
                       );

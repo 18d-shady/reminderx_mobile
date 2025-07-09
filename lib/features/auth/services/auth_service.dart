@@ -10,9 +10,10 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 class AuthService {
   static const _accessTokenKey = 'access_token';
   static const _refreshTokenKey = 'refresh_token';
-  
+
   // Global navigator key for handling navigation from anywhere
-  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+  static final GlobalKey<NavigatorState> navigatorKey =
+      GlobalKey<NavigatorState>();
 
   // Save tokens
   static Future<void> saveTokens(String access, String refresh) async {
@@ -75,16 +76,18 @@ class AuthService {
         return false;
       }
 
-      final response = await http.post(
-        Uri.parse('${baseUrl}api/token/refresh/'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'refresh': refreshToken}),
-      ).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          throw NetworkException();
-        },
-      );
+      final response = await http
+          .post(
+            Uri.parse('${baseUrl}api/token/refresh/'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'refresh': refreshToken}),
+          )
+          .timeout(
+            const Duration(seconds: 10),
+            onTimeout: () {
+              throw NetworkException();
+            },
+          );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -113,13 +116,13 @@ class AuthService {
   // Force login - clears tokens and navigates to login screen
   static Future<bool> forceLogin() async {
     await logout();
-    
+
     // Navigate to login screen and remove all previous routes
     navigatorKey.currentState?.pushNamedAndRemoveUntil(
       '/login', // Make sure this matches your login route name
       (route) => false,
     );
-    
+
     return false;
   }
 
@@ -133,17 +136,19 @@ class AuthService {
       String? token = await FirebaseMessaging.instance.getToken();
 
       if (token != null) {
-        final platform = Platform.isAndroid ? 'android' : Platform.isIOS ? 'ios' : 'unknown';
+        final platform =
+            Platform.isAndroid
+                ? 'android'
+                : Platform.isIOS
+                ? 'ios'
+                : 'unknown';
         final response = await http.post(
           Uri.parse('${baseUrl}api/fcm-token/'),
           headers: {
             'Authorization': 'Bearer $accessToken',
             'Content-Type': 'application/json',
           },
-          body: jsonEncode({
-            'token': token,
-            'platform': platform,
-          }),
+          body: jsonEncode({'token': token, 'platform': platform}),
         );
         if (response.statusCode == 200) {
           print('FCM token registered successfully');
@@ -159,16 +164,18 @@ class AuthService {
   // Login
   Future<bool> login(String username, String password) async {
     try {
-      final response = await http.post(
-        Uri.parse('${baseUrl}api/token/'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'username': username, 'password': password}),
-      ).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          throw NetworkException();
-        },
-      );
+      final response = await http
+          .post(
+            Uri.parse('${baseUrl}api/token/'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'username': username, 'password': password}),
+          )
+          .timeout(
+            const Duration(seconds: 10),
+            onTimeout: () {
+              throw NetworkException();
+            },
+          );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -200,7 +207,12 @@ class AuthService {
   }
 
   // Register
-  Future<bool> register(String username, String email, String password, String otp) async {
+  Future<bool> register(
+    String username,
+    String email,
+    String password,
+    String otp,
+  ) async {
     try {
       final body = {
         'username': username,
@@ -208,16 +220,18 @@ class AuthService {
         'password': password,
         'otp': otp,
       };
-      final response = await http.post(
-        Uri.parse('${baseUrl}api/register/'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(body),
-      ).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          throw NetworkException();
-        },
-      );
+      final response = await http
+          .post(
+            Uri.parse('${baseUrl}api/register/'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(body),
+          )
+          .timeout(
+            const Duration(seconds: 10),
+            onTimeout: () {
+              throw NetworkException();
+            },
+          );
 
       if (response.statusCode == 201) {
         final data = jsonDecode(response.body);
@@ -226,11 +240,17 @@ class AuthService {
       } else if (response.statusCode == 400) {
         final data = jsonDecode(response.body);
         if (data['username'] != null) {
-          throw AuthException('Username already exists', code: 'USERNAME_EXISTS');
+          throw AuthException(
+            'Username already exists',
+            code: 'USERNAME_EXISTS',
+          );
         } else if (data['email'] != null) {
           throw AuthException('Email already exists', code: 'EMAIL_EXISTS');
         } else {
-          throw AuthException('Invalid registration data', code: 'INVALID_DATA');
+          throw AuthException(
+            'Invalid registration data',
+            code: 'INVALID_DATA',
+          );
         }
       } else if (response.statusCode >= 500) {
         throw ServerException();
@@ -250,22 +270,27 @@ class AuthService {
   // Request password reset
   Future<bool> requestPasswordReset(String email) async {
     try {
-      final response = await http.post(
-        Uri.parse('${baseUrl}api/password_reset/'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': email}),
-      ).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          throw NetworkException();
-        },
-      );
+      final response = await http
+          .post(
+            Uri.parse('${baseUrl}api/password_reset/'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'email': email}),
+          )
+          .timeout(
+            const Duration(seconds: 20),
+            onTimeout: () {
+              throw NetworkException();
+            },
+          );
 
       if (response.statusCode == 200) {
         return true;
       } else if (response.statusCode == 400) {
         final data = jsonDecode(response.body);
-        throw AuthException(data['detail'] ?? 'Invalid email address', code: 'INVALID_EMAIL');
+        throw AuthException(
+          data['detail'] ?? 'Invalid email address',
+          code: 'INVALID_EMAIL',
+        );
       } else if (response.statusCode >= 500) {
         throw ServerException();
       } else {
@@ -284,22 +309,27 @@ class AuthService {
   // Confirm password reset (with token and new password)
   Future<bool> confirmPasswordReset(String token, String newPassword) async {
     try {
-      final response = await http.post(
-        Uri.parse('${baseUrl}api/password_reset/confirm/'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'token': token, 'new_password': newPassword}),
-      ).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          throw NetworkException();
-        },
-      );
+      final response = await http
+          .post(
+            Uri.parse('${baseUrl}api/password_reset/confirm/'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'token': token, 'password': newPassword}),
+          )
+          .timeout(
+            const Duration(seconds: 20),
+            onTimeout: () {
+              throw NetworkException();
+            },
+          );
 
       if (response.statusCode == 200) {
         return true;
       } else if (response.statusCode == 400) {
         final data = jsonDecode(response.body);
-        throw AuthException(data['detail'] ?? 'Invalid token or password', code: 'INVALID_DATA');
+        throw AuthException(
+          data['detail'] ?? 'Invalid token or password',
+          code: 'INVALID_DATA',
+        );
       } else if (response.statusCode >= 500) {
         throw ServerException();
       } else {
@@ -318,16 +348,18 @@ class AuthService {
   // Send verification email (OTP) with username and email
   Future<void> sendVerificationEmail(String username, String email) async {
     try {
-      final response = await http.post(
-        Uri.parse('${baseUrl}api/verify-email/'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'username': username, 'email': email}),
-      ).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          throw NetworkException();
-        },
-      );
+      final response = await http
+          .post(
+            Uri.parse('${baseUrl}api/verify-email/'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'username': username, 'email': email}),
+          )
+          .timeout(
+            const Duration(seconds: 10),
+            onTimeout: () {
+              throw NetworkException();
+            },
+          );
       if (response.statusCode == 200) {
         return;
       } else if (response.statusCode == 400) {

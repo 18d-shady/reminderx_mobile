@@ -9,7 +9,7 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:open_filex/open_filex.dart';
 import '../../../core/theme.dart';
-import 'package:intl_phone_field/intl_phone_field.dart';
+import 'package:intl_phone_number_input/intl_phone_number_input.dart';
 
 class SettingsPage extends StatefulWidget {
   final Isar isar;
@@ -31,11 +31,12 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _showPhoneEdit = false;
   Profile? _profile;
   final ImagePicker _picker = ImagePicker();
+  PhoneNumber? _phoneNumber;
   final TextEditingController _phoneController = TextEditingController();
+  final GlobalKey<FormState> _phoneFormKey = GlobalKey<FormState>();
   bool _isUpdatingProfile = false;
   String? _phoneIsoCode = 'NG';
   bool _isPhoneValid = true;
-  String _internationalPhone = '';
 
   @override
   void initState() {
@@ -53,15 +54,23 @@ class _SettingsPageState extends State<SettingsPage> {
     final subscription = widget.isar.profiles
         .where()
         .watch(fireImmediately: true)
-        .listen((profiles) {
+        .listen((profiles) async {
           if (profiles.isNotEmpty && mounted) {
+            final phone = profiles.first.phoneNumber ?? '';
+            PhoneNumber number = PhoneNumber(isoCode: _phoneIsoCode ?? 'NG');
+            if (phone.isNotEmpty) {
+              number = await PhoneNumber.getRegionInfoFromPhoneNumber(phone);
+            }
             setState(() {
               _profile = profiles.first;
               _emailNotifications = _profile?.emailNotifications ?? true;
               _smsNotifications = _profile?.smsNotifications ?? false;
               _pushNotifications = _profile?.pushNotifications ?? true;
               _whatsappNotifications = _profile?.whatsappNotifications ?? false;
-              _phoneController.text = _profile?.phoneNumber ?? '';
+              _phoneNumber = number;
+              _phoneController.text =
+                  number.phoneNumber?.replaceFirst(number.dialCode ?? '', '') ??
+                  '';
             });
           }
         });
@@ -126,30 +135,22 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _updatePhoneNumber() async {
     if (_profile == null || !_isPhoneValid) return;
-
+    if (!_phoneFormKey.currentState!.validate()) return;
     setState(() {
       _isUpdatingProfile = true;
       _error = null;
     });
-
     try {
-      // Always send phone number in international format using IntlPhoneField value
-      final phoneNumber = _internationalPhone.isNotEmpty
-          ? _internationalPhone
-          : _phoneController.text;
+      final phoneNumber = _phoneNumber?.phoneNumber ?? '';
       final response = await DocumentApiService.updateProfile(
         phoneNumber: phoneNumber,
       );
-
       if (response.statusCode == 200) {
-        // Sync with backend to get latest data
         final syncService = SyncService();
         await syncService.fetchAndStoreAll();
-
         setState(() {
           _showPhoneEdit = false;
         });
-
         if (mounted) {
           ScaffoldMessenger.of(
             context,
@@ -583,75 +584,97 @@ class _SettingsPageState extends State<SettingsPage> {
                   if (_showPhoneEdit)
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                      child: Column(
-                        children: [
-                          IntlPhoneField(
-                            initialCountryCode: 'NG',
-                            controller: _phoneController,
-                            decoration: const InputDecoration(
-                              labelText: 'Phone Number',
-                              border: OutlineInputBorder(),
+                      child: Form(
+                        key: _phoneFormKey,
+                        child: Column(
+                          children: [
+                            InternationalPhoneNumberInput(
+                              onInputChanged: (PhoneNumber number) {
+                                setState(() {
+                                  _phoneNumber = number;
+                                  _phoneController.text =
+                                      number.phoneNumber?.replaceFirst(
+                                        number.dialCode ?? '',
+                                        '',
+                                      ) ??
+                                      '';
+                                  _isPhoneValid =
+                                      number.phoneNumber != null &&
+                                      number.phoneNumber!.length > 6;
+                                });
+                              },
+                              onInputValidated: (bool value) {
+                                setState(() {
+                                  _isPhoneValid = value;
+                                });
+                              },
+                              selectorConfig: const SelectorConfig(
+                                selectorType: PhoneInputSelectorType.DROPDOWN,
+                              ),
+                              ignoreBlank: false,
+                              autoValidateMode:
+                                  AutovalidateMode.onUserInteraction,
+                              initialValue: _phoneNumber,
+                              textFieldController: _phoneController,
+                              formatInput: true,
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    signed: true,
+                                    decimal: false,
+                                  ),
+                              inputDecoration: const InputDecoration(
+                                labelText: 'Phone Number',
+                                border: OutlineInputBorder(),
+                              ),
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Please enter a valid phone number';
+                                }
+                                return null;
+                              },
                             ),
-                            onChanged: (phone) {
-                              setState(() {
-                                _phoneController.text = phone.completeNumber;
-                                _phoneIsoCode = phone.countryISOCode;
-                                _isPhoneValid = phone.isValidNumber();
-                                _internationalPhone = phone.completeNumber;
-                              });
-                            },
-                            onCountryChanged: (country) {
-                              setState(() {
-                                _phoneIsoCode = country.code;
-                              });
-                            },
-                            validator: (phone) {
-                              if (phone == null || !phone.isValidNumber()) {
-                                return 'Please enter a valid phone number';
-                              }
-                              return null;
-                            },
-                          ),
-                          if (_error != null)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 8),
-                              child: Text(
-                                _error!,
-                                style: const TextStyle(color: Colors.red),
+                            if (_error != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8),
+                                child: Text(
+                                  _error!,
+                                  style: const TextStyle(color: Colors.red),
+                                ),
+                              ),
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                onPressed:
+                                    _isUpdatingProfile || !_isPhoneValid
+                                        ? null
+                                        : _updatePhoneNumber,
+                                style: ElevatedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                child:
+                                    _isUpdatingProfile
+                                        ? const SizedBox(
+                                          height: 20,
+                                          width: 20,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            valueColor:
+                                                AlwaysStoppedAnimation<Color>(
+                                                  Colors.white,
+                                                ),
+                                          ),
+                                        )
+                                        : const Text('Update Phone Number'),
                               ),
                             ),
-                          const SizedBox(height: 16),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              onPressed: _isUpdatingProfile || !_isPhoneValid
-                                  ? null
-                                  : _updatePhoneNumber,
-                              style: ElevatedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                              child:
-                                  _isUpdatingProfile
-                                      ? const SizedBox(
-                                        height: 20,
-                                        width: 20,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          valueColor:
-                                              AlwaysStoppedAnimation<Color>(
-                                                Colors.white,
-                                              ),
-                                        ),
-                                      )
-                                      : const Text('Update Phone Number'),
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                 ],

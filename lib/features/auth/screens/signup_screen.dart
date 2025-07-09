@@ -94,7 +94,7 @@ class _SignupScreenState extends State<SignupScreen> {
     }
 
     if (!RegExp(
-      r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}\$',
+      r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
     ).hasMatch(emailController.text)) {
       setState(() {
         errorMessage = 'Please enter a valid email address';

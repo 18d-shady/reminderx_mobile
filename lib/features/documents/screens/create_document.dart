@@ -270,7 +270,20 @@ class _CreateDocumentScreenState extends State<CreateDocumentScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      appBar: AppBar(title: const Text('Create Document')),
+      appBar: AppBar(
+        backgroundColor: isDark ? Colors.black : Colors.white,
+        iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
+        elevation: 0,
+        title: Text(
+          'Create Document',
+          style: TextStyle(
+            fontSize: 16,
+            color: isDark ? Colors.white : Colors.black,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        centerTitle: false,
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Form(
