@@ -592,12 +592,7 @@ class _SettingsPageState extends State<SettingsPage> {
                               onInputChanged: (PhoneNumber number) {
                                 setState(() {
                                   _phoneNumber = number;
-                                  _phoneController.text =
-                                      number.phoneNumber?.replaceFirst(
-                                        number.dialCode ?? '',
-                                        '',
-                                      ) ??
-                                      '';
+                                  //_phoneController.text = number.phoneNumber?.replaceFirst(number.dialCode ?? '', '', ) ?? '';
                                   _isPhoneValid =
                                       number.phoneNumber != null &&
                                       number.phoneNumber!.length > 6;

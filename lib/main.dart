@@ -6,10 +6,30 @@ import 'features/auth/services/auth_service.dart'; // Simulated auth check
 import 'features/auth/screens/signup_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 //import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:workmanager/workmanager.dart';
+import 'background_sync.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+
+  // Initialize Workmanager
+  Workmanager().initialize(
+    callbackDispatcher,
+    isInDebugMode: false,
+  );
+
+  // Register periodic sync task
+  Workmanager().registerPeriodicTask(
+    "1", // unique name
+    syncTask,
+    frequency: const Duration(minutes: 30),
+    initialDelay: const Duration(minutes: 1),
+    constraints: Constraints(
+      networkType: NetworkType.connected, // Only run when network is available
+    ),
+  );
+
   runApp(const MyApp());
 }
 
@@ -26,7 +46,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       navigatorKey: AuthService.navigatorKey,
-      title: 'ReminderX',
+      title: 'Naikas',
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system,
