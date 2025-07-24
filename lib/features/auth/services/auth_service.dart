@@ -327,7 +327,7 @@ class AuthService {
       } else if (response.statusCode == 400) {
         final data = jsonDecode(response.body);
         throw AuthException(
-          data['detail'] ?? 'Invalid token or password',
+          data['detail'] ?? 'Invalid token or password, ensure password is not the same as the old one',
           code: 'INVALID_DATA',
         );
       } else if (response.statusCode >= 500) {
