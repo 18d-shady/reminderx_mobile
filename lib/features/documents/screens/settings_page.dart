@@ -590,25 +590,17 @@ class _SettingsPageState extends State<SettingsPage> {
                           children: [
                             InternationalPhoneNumberInput(
                               onInputChanged: (PhoneNumber number) {
-                                setState(() {
-                                  _phoneNumber = number;
-                                  //_phoneController.text = number.phoneNumber?.replaceFirst(number.dialCode ?? '', '', ) ?? '';
-                                  _isPhoneValid =
-                                      number.phoneNumber != null &&
-                                      number.phoneNumber!.length > 6;
-                                });
+                                _phoneNumber = number;
+                                _isPhoneValid = number.phoneNumber != null && number.phoneNumber!.length > 6;
                               },
                               onInputValidated: (bool value) {
-                                setState(() {
-                                  _isPhoneValid = value;
-                                });
+                                _isPhoneValid = value;
                               },
                               selectorConfig: const SelectorConfig(
                                 selectorType: PhoneInputSelectorType.DROPDOWN,
                               ),
                               ignoreBlank: false,
-                              autoValidateMode:
-                                  AutovalidateMode.onUserInteraction,
+                              autoValidateMode: AutovalidateMode.onUserInteraction,
                               initialValue: _phoneNumber,
                               textFieldController: _phoneController,
                               formatInput: true,

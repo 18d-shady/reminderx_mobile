@@ -17,6 +17,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   bool isLoading = false;
   String? errorMessage;
   String? successMessage;
+  bool _obscurePassword = true;
+  bool _obscurePassword2 = true;
 
   void _resetPassword() async {
     setState(() {
@@ -172,7 +174,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   TextField(
                     controller: passwordController,
                     style: const TextStyle(color: Colors.white),
-                    obscureText: true,
+                    obscureText: _obscurePassword,
                     decoration: InputDecoration(
                       labelText: 'New Password',
                       labelStyle: const TextStyle(color: Colors.white),
@@ -190,13 +192,24 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                         borderSide: BorderSide(color: primaryColor),
                         borderRadius: BorderRadius.circular(8),
                       ),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                          color: Colors.white70,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscurePassword = !_obscurePassword;
+                          });
+                        },
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: confirmPasswordController,
                     style: const TextStyle(color: Colors.white),
-                    obscureText: true,
+                    obscureText: _obscurePassword2,
                     decoration: InputDecoration(
                       labelText: 'Confirm Password',
                       labelStyle: const TextStyle(color: Colors.white),
@@ -213,6 +226,17 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                       focusedBorder: OutlineInputBorder(
                         borderSide: BorderSide(color: primaryColor),
                         borderRadius: BorderRadius.circular(8),
+                      ),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword2 ? Icons.visibility_off : Icons.visibility,
+                          color: Colors.white70,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscurePassword2 = !_obscurePassword2;
+                          });
+                        },
                       ),
                     ),
                   ),

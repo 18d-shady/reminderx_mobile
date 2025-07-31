@@ -17,6 +17,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController passwordController = TextEditingController();
   bool isLoading = false;
   String? errorMessage;
+  bool _obscurePassword = true;
+
 
   void _login() async {
     if (usernameController.text.trim().isEmpty ||
@@ -60,7 +62,7 @@ class _LoginScreenState extends State<LoginScreen> {
       });
     } on UnknownException {
       setState(() {
-        errorMessage = 'An unexpected error occurred. Please try again.';
+        errorMessage = 'Invalid username or password!';
       });
     } catch (e) {
       setState(() {
@@ -204,7 +206,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     decoration: InputDecoration(
                       filled: true,
                       fillColor: Colors.white.withOpacity(0.1),
-                      labelText: 'Username',
+                      labelText: 'Username or Email',
                       labelStyle: const TextStyle(
                         color: Colors.white,
                         fontFamily: "InriaSans",
@@ -217,7 +219,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 16),
                   TextField(
                     controller: passwordController,
-                    obscureText: true,
+                    obscureText: _obscurePassword,
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       filled: true,
@@ -229,6 +231,17 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
+                      ),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                          color: Colors.white70,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscurePassword = !_obscurePassword;
+                          });
+                        },
                       ),
                     ),
                   ),

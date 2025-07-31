@@ -20,6 +20,8 @@ class _SignupScreenState extends State<SignupScreen> {
   String? errorMessage;
   String? usernameError;
   String? emailError;
+  bool _obscurePassword = true;
+  bool _obscurePassword2 = true;
 
   void _sendOtpAndShowModal() async {
     setState(() {
@@ -238,7 +240,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   const SizedBox(height: 16),
                   TextField(
                     controller: passwordController,
-                    obscureText: true,
+                    obscureText: _obscurePassword,
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       filled: true,
@@ -251,12 +253,23 @@ class _SignupScreenState extends State<SignupScreen> {
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                          color: Colors.white70,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscurePassword = !_obscurePassword;
+                          });
+                        },
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: confirmPasswordController,
-                    obscureText: true,
+                    obscureText: _obscurePassword2,
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       filled: true,
@@ -268,6 +281,17 @@ class _SignupScreenState extends State<SignupScreen> {
                       ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
+                      ),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword2 ? Icons.visibility_off : Icons.visibility,
+                          color: Colors.white70,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscurePassword2 = !_obscurePassword2;
+                          });
+                        },
                       ),
                     ),
                   ),

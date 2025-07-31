@@ -94,10 +94,13 @@ class _DocumentViewPageState extends State<DocumentViewPage> {
                   title: Text(link['label']!),
                   onTap: () async {
                     final url = link['url']!;
-                    if (await canLaunchUrl(Uri.parse(url))) {
-                      await launchUrl(
-                        Uri.parse(url),
-                        mode: LaunchMode.externalApplication,
+                    final uri = Uri.parse(url);
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                    } else {
+                      print("Could not launch $url");
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Could not launch $url')),
                       );
                     }
                   },
