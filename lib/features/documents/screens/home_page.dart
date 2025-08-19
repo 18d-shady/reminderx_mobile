@@ -147,19 +147,31 @@ class _HomePageState extends State<HomePage> {
                               ),
                             )
                             : FlutterCarousel(
-                              options: CarouselOptions(
-                                height: 160,
+                              options: FlutterCarouselOptions(
+                                height: 200,
                                 viewportFraction: 1.0,
                                 enableInfiniteScroll: false,
                                 autoPlay: true,
                                 showIndicator: true,
-                                slideIndicator: CircularSlideIndicator(),
+                                slideIndicator: CircularSlideIndicator(
+                                  slideIndicatorOptions: SlideIndicatorOptions(
+                                    alignment: Alignment.bottomCenter,
+                                    currentIndicatorColor:  Theme.of(context).primaryColor,
+                                    indicatorBackgroundColor: Colors.white.withOpacity(0.5),
+                                    indicatorBorderColor:  Theme.of(context).primaryColor,
+                                    indicatorBorderWidth: .5,
+                                    indicatorRadius: 4,
+                                    itemSpacing: 12,
+                                    padding: const EdgeInsets.only(bottom:8.0),
+                                    enableAnimation: true,
+                                  ),
+                                ),
                               ),
                               items:
                                   documentStats.map((stat) {
                                     return Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 8.0,
+                                      padding: const EdgeInsets.only(
+                                        bottom: 24.0,
                                       ),
                                       child: DocumentCard(
                                         title: stat['title'] as String,
